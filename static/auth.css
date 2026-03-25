@@ -1,0 +1,76 @@
+/* Background */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+/* Glass Card */
+.container {
+    width: 350px;
+    padding: 30px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
+    text-align: center;
+}
+
+/* Title */
+.title {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #00eaff;
+}
+
+/* Inputs */
+input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+/* Button */
+.main-btn, .signup-btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 30px;
+    background: linear-gradient(90deg, #00eaff, #007bff);
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* Hover Glow */
+.main-btn:hover, .signup-btn:hover {
+    box-shadow: 0 0 20px #00eaff;
+    transform: scale(1.05);
+}
+
+/* Links */
+a {
+    color: #00eaff;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Message */
+.message {
+    color: #ff6b6b;
+    font-size: 14px;
+}

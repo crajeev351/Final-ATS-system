@@ -1,0 +1,76 @@
+/* Background */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364);
+    color: white;
+}
+
+/* Container */
+.report-container {
+    width: 700px;
+    margin: 50px auto;
+    padding: 30px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
+}
+
+/* Header */
+.header-section h2 {
+    color: #00eaff;
+}
+
+/* Score Box */
+.score-box {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.score {
+    font-size: 60px;
+    font-weight: bold;
+    color: #00eaff;
+    text-shadow: 0 0 20px #00eaff;
+}
+
+/* Sections */
+.section {
+    margin-top: 25px;
+}
+
+.section h3 {
+    color: #00eaff;
+}
+
+/* Lists */
+ul {
+    padding-left: 20px;
+}
+
+li {
+    margin-bottom: 8px;
+}
+
+/* Button */
+.btn {
+    margin-top: 20px;
+    padding: 12px 20px;
+    border-radius: 30px;
+    border: none;
+    background: linear-gradient(90deg, #00eaff, #007bff);
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn:hover {
+    box-shadow: 0 0 20px #00eaff;
+}
+
+/* Link */
+a {
+    color: #00eaff;
+    text-decoration: none;
+}

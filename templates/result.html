@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ATS Result</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
+</head>
+<body>
+
+<div class="report-container">
+
+    <div class="header-section">
+        <h2>🚀 ATS Analysis Result</h2>
+        <p>AI Resume Match Report</p>
+    </div>
+
+    <!-- ✅ Match Score -->
+    <div class="score-box">
+        <div class="score">{{ score }}%</div>
+        <p>Match Percentage</p>
+    </div>
+
+    <!-- ✅ Matched Skills -->
+    <div class="section">
+        <h3>✅ Matched Skills</h3>
+        <ul>
+            {% for skill in matched %}
+                <li>{{ skill }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- ❌ Missing Skills -->
+    <div class="section">
+        <h3>❌ Missing Skills</h3>
+        <ul>
+            {% for skill in missing %}
+                <li>{{ skill }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- 💡 Suggestions -->
+    <div class="section">
+        <h3>💡 Suggestions</h3>
+        <ul>
+            {% for tip in suggestions %}
+                <li>{{ tip }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Buttons -->
+    <div style="text-align:center;">
+        <button onclick="window.print()" class="btn">Download PDF</button>
+        <br><br>
+        <a href="/dashboard">← Analyze Another Resume</a>
+    </div>
+
+</div>
+
+</body>
+</html>
