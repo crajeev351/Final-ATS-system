@@ -1,10 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for
-
 app = Flask(__name__)
+import pymysql
+def get_db():
+    return pymysql.connect(
+        host="localhost",
+        user="root",
+        password="",  # XAMPP default
+        database="ats_project",
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
-users = {}   # temporary storage
-
-# DEFAULT PAGE → SIGNUP
+# DEAULT PAGE → SIGNUP
 @app.route('/', methods=['GET', 'POST'])
 def signup():
     message = ""
