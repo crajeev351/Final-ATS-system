@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Mock Interview</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+</head>
+<body>
+
+<div class="container">
+
+    <h2 class="title">🎤 AI Mock Interview</h2>
+
+    <!-- Question -->
+    <p id="question">Loading question...</p>
+
+    <!-- Camera -->
+    <video id="video" width="300" autoplay></video>
+
+    <!-- Answer -->
+    <textarea id="answer" placeholder="Your answer..."></textarea>
+
+    <br><br>
+
+    <button onclick="startListening()">🎙 Speak</button>
+    <button onclick="submitAnswer()">Submit</button>
+
+</div>
+
+<!-- MediaPipe -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+
+<script>
+
+// =======================
+// VARIABLES
+// =======================
+let questions = [];
+let currentQuestionIndex = 0;
+
+let faceScore = {
+    stability: 0,
+    movement: 0,
+    frames: 0
+};
+
+// =======================
+// LOAD QUESTIONS
+// =======================
+fetch("/get-questions")
+.then(res => res.json())
+.then(data => {
+    questions = data.questions;
+
+    if (questions.length > 0) {
+        document.getElementById("question").innerText = questions[0];
+    } else {
+        document.getElementById("question").innerText = "No questions found";
+    }
+});
+
+// =======================
+// CAMERA START
+// =======================
+const videoElement = document.getElementById("video");
+
+navigator.mediaDevices.getUserMedia({ video: true })
+.then(stream => {
+    videoElement.srcObject = stream;
+});
+
+// =======================
+// FACE TRACKING
+// =======================
+const faceMesh = new FaceMesh({
+    locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+    }
+});
+
+faceMesh.setOptions({
+    maxNumFaces: 1,
+    minDetectionConfidence: 0.5,
+    minTrackingConfidence: 0.5
+});
+
+faceMesh.onResults(results => {
+    if (results.multiFaceLandmarks.length > 0) {
+        faceScore.frames++;
+        faceScore.stability += 1;
+        faceScore.movement += Math.random();
+    }
+});
+
+const camera = new Camera(videoElement, {
+    onFrame: async () => {
+        await faceMesh.send({ image: videoElement });
+    },
+    width: 640,
+    height: 480
+});
+
+camera.start();
+
+// =======================
+// SPEECH INPUT
+// =======================
+function startListening() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.start();
+
+    recognition.onresult = function(event) {
+        document.getElementById("answer").value = event.results[0][0].transcript;
+    };
+}
+
+// =======================
+// SUBMIT ANSWER
+// =======================
+function submitAnswer() {
+    const answer = document.getElementById("answer").value;
+
+    fetch("/evaluate-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            answer: answer,
+            face: faceScore,
+            question: questions[currentQuestionIndex]
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        alert("Feedback:\n" + data.result);
+
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < questions.length) {
+            document.getElementById("question").innerText = questions[currentQuestionIndex];
+            document.getElementById("answer").value = "";
+        } else {
+            alert("Interview Completed 🎉");
+            window.location.href = "/dashboard";
+        }
+
+    });
+}
+
+</script>
+
+</body>
+</html>
