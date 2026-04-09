@@ -6,7 +6,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-genai.configure(api_key="AIzaSyApYBHuEnoYFQrv5_gnW-ryVCldWyta9pE")
+genai.configure(api_key="AIzaSyAhYlrtKFAogPrMBIG4d7nktxpUH36clQQ")
 model = genai.GenerativeModel('gemini-3-flash-preview')
 
 # Database connection
@@ -314,6 +314,11 @@ Suggestions:
 @app.route("/get-questions")
 def get_questions():
     return {"questions": session.get("questions", [])}
+
+@app.route('/logout')
+def logout():
+    session.pop("user", None)
+    return redirect(url_for('login'))
 
 if __name__ == '__main__':
     app.run(debug=True)
