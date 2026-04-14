@@ -1,13 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import pymysql
 import os
+from dotenv import load_dotenv
 from pdfminer.high_level import extract_text
 import google.generativeai as genai
+
+# Load environment variables from .env file
+load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-genai.configure(api_key="AIzaSyAhYlrtKFAogPrMBIG4d7nktxpUH36clQQ")
-model = genai.GenerativeModel('gemini-3-flash-preview')
+# API key loaded securely from .env
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+model = genai.GenerativeModel('gemini-2.5-flash')
 
 # Database connection
 def get_db():
@@ -100,10 +106,9 @@ def dashboard():
             file.save(filepath)
 
             # Extract text
-            from pdfminer.high_level import extract_text
             resume_text = extract_text(filepath)
 
-            # 🔥 AI PROMPT
+            # AI PROMPT
             prompt = f"""
 You are an ATS system.
 
@@ -135,14 +140,13 @@ Job Description:
             response = model.generate_content(prompt)
             result = response.text
 
-            # 🔥 Parse AI Output
+            # Parse AI Output
             score = 0
             matched = []
             missing = []
             suggestions = []
 
             lines = result.split("\n")
-
             current_section = None
 
             for line in lines:
@@ -186,6 +190,7 @@ Job Description:
 
     return render_template("dashboard.html")
 
+
 @app.route('/generate-questions', methods=['POST'])
 def generate_questions():
     if "user" not in session:
@@ -202,7 +207,6 @@ def generate_questions():
         file.save(filepath)
 
         # Extract text
-        from pdfminer.high_level import extract_text
         resume_text = extract_text(filepath)
 
         # Limit size
@@ -250,19 +254,17 @@ Resume:
         # Store in session
         session["questions"] = questions
 
-        # ✅ FIXED LINE (ADDED RETURN)
         return render_template("questions.html", questions=questions)
 
     except Exception as e:
         return f"Error: {e}"
-    
 
-    
+
 @app.route("/ai-interview")
 def ai_interview():
     if "user" not in session:
         return redirect(url_for("login"))
-    return render_template("ai_interview.html")    
+    return render_template("ai_interview.html")
 
 
 @app.route("/evaluate-answer", methods=["POST"])
@@ -308,17 +310,19 @@ Suggestions:
 """
 
     response = model.generate_content(prompt)
-
     return {"result": response.text}
+
 
 @app.route("/get-questions")
 def get_questions():
     return {"questions": session.get("questions", [])}
 
+
 @app.route('/logout')
 def logout():
     session.pop("user", None)
     return redirect(url_for('login'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)
