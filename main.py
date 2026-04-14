@@ -6,7 +6,7 @@ import google.generativeai as genai
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-genai.configure(api_key="AIzaSyAhYlrtKFAogPrMBIG4d7nktxpUH36clQQ")
+genai.configure(api_key="AIzaSyDTafJcdWTCAo9Qt5p2F9S0AdBJVyV4Cv4")
 model = genai.GenerativeModel('gemini-3-flash-preview')
 
 # Database connection
@@ -262,6 +262,29 @@ Resume:
 def ai_interview():
     if "user" not in session:
         return redirect(url_for("login"))
+    
+
+    # Generate basic questions
+    prompt = """
+Generate 3 simple HR interview questions.
+
+Rules:
+- Very basic
+- General questions
+- No numbering
+"""
+
+    response = model.generate_content(prompt)
+    basic_q = [q.strip() for q in response.text.split("\n") if q.strip()]
+
+    # Get resume questions
+    resume_q = session.get("questions", [])
+
+    # Merge both
+    all_q = basic_q + resume_q
+
+    session["all_questions"] = all_q
+
     return render_template("ai_interview.html")    
 
 
@@ -311,9 +334,94 @@ Suggestions:
 
     return {"result": response.text}
 
-@app.route("/get-questions")
+@app.route("/get-all-questions")
 def get_questions():
-    return {"questions": session.get("questions", [])}
+    return {"questions": session.get("all_questions", [])}
+
+@app.route("/final-evaluation", methods=["POST"])
+def final_evaluation():
+    data = request.get_json()
+
+    answers = data.get("answers", [])
+    face = data.get("face", {})
+    cheating = data.get("cheating", {})
+
+    stability = face.get("stability", 0)
+    frames = face.get("frames", 1)
+
+    face_score = round((stability / frames) * 10, 2)
+
+    cheating_score = (
+        cheating.get("noFace", 0) +
+        cheating.get("multipleFaces", 0) +
+        cheating.get("lookingAway", 0)
+    )
+
+    prompt = f"""
+You are an AI interviewer.
+
+Evaluate the candidate completely.
+
+Answers:
+{answers}
+
+Face Confidence Score: {face_score}/10
+
+Cheating Indicators:
+- No Face Count: {cheating.get("noFace")}
+- Multiple Faces: {cheating.get("multipleFaces")}
+- Looking Away: {cheating.get("lookingAway")}
+
+Give output in this format:
+
+Overall Score: /10
+
+Technical Skills:
+- ...
+
+Communication:
+- ...
+
+Confidence:
+- ...
+
+Cheating Analysis:
+- ...
+
+Final Verdict:
+- ...
+
+Suggestions for Improvement:
+- ...
+"""
+
+    response = model.generate_content(prompt)
+
+    result_text = response.text
+
+    # Temporary values (you can improve later)
+    data = {
+        "text": result_text,
+        "tech": 7,
+        "comm": 6,
+        "conf": 8
+    }
+
+    return data
+
+@app.route("/show-final-report", methods=["POST"])
+def show_final_report():
+    session["final_result"] = request.get_json()
+    return {"status": "ok"}
+
+
+@app.route("/final-report")
+def final_report():
+    return render_template(
+        "final_report.html",
+        result=session.get("final_result")
+    )
+
 
 @app.route('/logout')
 def logout():

@@ -23,6 +23,7 @@
 
     <button onclick="startListening()">🎙 Speak</button>
     <button onclick="submitAnswer()">Submit</button>
+    <button onclick="repeatQuestion()">🔊 Repeat Question</button>
 
 </div>
 
@@ -44,16 +45,25 @@ let faceScore = {
     frames: 0
 };
 
+let cheatingFlags = {
+    noFace: 0,
+    multipleFaces: 0,
+    lookingAway: 0
+};
+
+let allAnswers = [];
+
 // =======================
 // LOAD QUESTIONS
 // =======================
-fetch("/get-questions")
+fetch("/get-all-questions")
 .then(res => res.json())
 .then(data => {
     questions = data.questions;
 
     if (questions.length > 0) {
         document.getElementById("question").innerText = questions[0];
+        speak(questions[0]);  //🔊 SPEAK HERE
     } else {
         document.getElementById("question").innerText = "No questions found";
     }
@@ -85,10 +95,21 @@ faceMesh.setOptions({
 });
 
 faceMesh.onResults(results => {
-    if (results.multiFaceLandmarks.length > 0) {
+
+    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+        cheatingFlags.noFace++;
+    } 
+    else if (results.multiFaceLandmarks.length > 1) {
+        cheatingFlags.multipleFaces++;
+    } 
+    else {
         faceScore.frames++;
         faceScore.stability += 1;
         faceScore.movement += Math.random();
+
+        if (Math.random() > 0.8) {
+            cheatingFlags.lookingAway++;
+        }
     }
 });
 
@@ -101,6 +122,24 @@ const camera = new Camera(videoElement, {
 });
 
 camera.start();
+
+// VOICE INPUT
+
+function speak(text) {
+    window.speechSynthesis.cancel(); // ✅ stops previous voice
+
+    let speech = new SpeechSynthesisUtterance(text);
+
+    speech.lang = "en-US";
+    speech.rate = 0.9;
+    speech.pitch = 1.1;
+
+    window.speechSynthesis.speak(speech);
+}
+
+function repeatQuestion() {
+    speak(questions[currentQuestionIndex]);
+}
 
 // =======================
 // SPEECH INPUT
@@ -119,6 +158,7 @@ function startListening() {
 // =======================
 function submitAnswer() {
     const answer = document.getElementById("answer").value;
+    allAnswers.push(answer);
 
     fetch("/evaluate-answer", {
         method: "POST",
@@ -126,22 +166,37 @@ function submitAnswer() {
         body: JSON.stringify({
             answer: answer,
             face: faceScore,
+            cheating: cheatingFlags,
             question: questions[currentQuestionIndex]
         })
     })
     .then(res => res.json())
     .then(data => {
 
-        alert("Feedback:\n" + data.result);
-
         currentQuestionIndex++;
 
         if (currentQuestionIndex < questions.length) {
             document.getElementById("question").innerText = questions[currentQuestionIndex];
+            speak(questions[currentQuestionIndex]);   // 🔊 SPEAK NEXT QUESTION
             document.getElementById("answer").value = "";
-        } else {
-            alert("Interview Completed 🎉");
-            window.location.href = "/dashboard";
+        }
+        else {
+            fetch("/final-evaluation", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    answers: allAnswers,
+                    face: faceScore,
+                    cheating: cheatingFlags
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert("Final Report:\n" + data.result);
+                window.location.href = "/dashboard";
+            });
         }
 
     });

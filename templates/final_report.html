@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Final Interview Report</title>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Your existing CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
+</head>
+
+<body>
+
+<div class="report-container">
+
+    <h2>📊 Final Interview Report</h2>
+
+    <!-- Pie Chart -->
+    <canvas id="pieChart" width="300" height="300"></canvas>
+
+    <!-- Text Result -->
+    <div id="textResult" style="margin-top:20px;"></div>
+
+</div>
+
+<!-- ✅ SAFE DATA FROM FLASK -->
+<script id="result-data" type="application/json">
+    {{ result | tojson | safe }}
+</script>
+
+<script>
+
+// ✅ GET DATA SAFELY
+const rawData = document.getElementById("result-data").textContent;
+
+let data;
+
+try {
+    data = JSON.parse(rawData);
+} catch (e) {
+    data = {
+        text: "No data available",
+        tech: 0,
+        comm: 0,
+        conf: 0
+    };
+}
+
+// ✅ SHOW TEXT RESULT
+document.getElementById("textResult").innerText = data.text;
+
+// ✅ PIE CHART DATA
+const chartData = {
+    labels: ["Technical", "Communication", "Confidence"],
+    datasets: [{
+        data: [data.tech, data.comm, data.conf]
+    }]
+};
+
+// ✅ DRAW CHART
+new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: chartData
+});
+
+</script>
+
+</body>
+</html>
