@@ -10,20 +10,40 @@
 
     <h2 class="title">🎤 AI Mock Interview</h2>
 
+    <!-- Start Interview Overlay -->
+    <div id="start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 15px;">
+        <h3 style="font-size: 1.5rem; margin-bottom: 10px;">Ready to start your interview?</h3>
+        <p style="margin-bottom: 20px; color: #666;">Please ensure your camera is on and you are in a quiet environment.</p>
+        <button onclick="beginInterview()" style="padding: 15px 30px; font-size: 1.2rem; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🚀 Start Interview</button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div style="width: 100%; background: #eee; border-radius: 10px; margin-bottom: 20px;">
+        <div id="progress-bar" style="width: 0%; height: 10px; background: #4CAF50; border-radius: 10px; transition: width 0.3s;"></div>
+    </div>
+
     <!-- Question -->
-    <p id="question">Loading question...</p>
+    <p id="question" style="font-size: 1.2rem; font-weight: bold; min-height: 3em;">Welcome! Click the button to start.</p>
 
     <!-- Camera -->
-    <video id="video" width="300" autoplay></video>
+    <div style="position: relative; display: inline-block;">
+        <video id="video" width="300" autoplay style="border-radius: 10px; border: 3px solid #ddd;"></video>
+        <div id="face-status" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px;">Checking Face...</div>
+    </div>
 
     <!-- Answer -->
-    <textarea id="answer" placeholder="Your answer..."></textarea>
+    <textarea id="answer" placeholder="Your answer will appear here after speaking..." style="width: 100%; margin-top: 20px; height: 100px;"></textarea>
 
     <br><br>
 
-    <button onclick="startListening()">🎙 Speak</button>
-    <button onclick="submitAnswer()">Submit</button>
-    <button onclick="repeatQuestion()">🔊 Repeat Question</button>
+    <div class="controls" style="display: flex; gap: 10px; justify-content: center;">
+        <button onclick="toggleListening()" id="mic-btn">🎙 Speak</button>
+        <button onclick="submitAnswer()" id="submit-btn">Submit Answer</button>
+        <button onclick="repeatQuestion()">🔊 Repeat</button>
+    </div>
+    <div id="score-container" style="display: none; text-align: center; margin-top: 20px;">
+        <button onclick="viewScoreCard()" style="padding: 15px 30px; font-size: 1.2rem; background: #2196F3; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📊 View My Score Card</button>
+    </div>
 
 </div>
 
@@ -60,14 +80,20 @@ fetch("/get-all-questions")
 .then(res => res.json())
 .then(data => {
     questions = data.questions;
-
     if (questions.length > 0) {
-        document.getElementById("question").innerText = questions[0];
-        speak(questions[0]);  //🔊 SPEAK HERE
+        document.getElementById("question").innerText = "Ready! Click 'Start Interview' to begin.";
     } else {
         document.getElementById("question").innerText = "No questions found";
     }
 });
+
+function beginInterview() {
+    document.getElementById("start-overlay").style.display = "none";
+    if (questions.length > 0) {
+        document.getElementById("question").innerText = questions[0];
+        speak(questions[0]);
+    }
+}
 
 // =======================
 // CAMERA START
@@ -80,34 +106,64 @@ navigator.mediaDevices.getUserMedia({ video: true })
 });
 
 // =======================
-// FACE TRACKING
+// FACE TRACKING LOGIC
 // =======================
 const faceMesh = new FaceMesh({
-    locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-    }
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
 });
 
 faceMesh.setOptions({
     maxNumFaces: 1,
+    refineLandmarks: true,
     minDetectionConfidence: 0.5,
     minTrackingConfidence: 0.5
 });
 
+let lastFaceCenter = { x: 0, y: 0 };
+
 faceMesh.onResults(results => {
+    const statusEl = document.getElementById("face-status");
 
     if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+        statusEl.innerText = "❌ No Face Detected";
+        statusEl.style.color = "red";
         cheatingFlags.noFace++;
-    } 
+    }
     else if (results.multiFaceLandmarks.length > 1) {
+        statusEl.innerText = "⚠️ Multiple Faces";
+        statusEl.style.color = "orange";
         cheatingFlags.multipleFaces++;
-    } 
+    }
     else {
-        faceScore.frames++;
-        faceScore.stability += 1;
-        faceScore.movement += Math.random();
+        statusEl.innerText = "✅ Face Tracked";
+        statusEl.style.color = "lime";
 
-        if (Math.random() > 0.8) {
+        const landmarks = results.multiFaceLandmarks[0];
+
+        // 1. Stability Analysis (Center of face movement)
+        const center = {
+            x: landmarks[1].x, // Nose tip
+            y: landmarks[1].y
+        };
+
+        const dist = Math.sqrt(Math.pow(center.x - lastFaceCenter.x, 2) + Math.pow(center.y - lastFaceCenter.y, 2));
+        if (dist < 0.02) {
+            faceScore.stability++;
+        }
+        faceScore.movement += dist;
+        lastFaceCenter = center;
+        faceScore.frames++;
+
+        // 2. Gaze/Looking Away Detection (Simple Head Pose)
+        // Compare nose tip (1) relative to left/right eye corners (33, 263)
+        const leftEye = landmarks[33];
+        const rightEye = landmarks[263];
+        const nose = landmarks[1];
+
+        const midEyeX = (leftEye.x + rightEye.x) / 2;
+        const gazeDiff = Math.abs(nose.x - midEyeX);
+
+        if (gazeDiff > 0.05) { // Candidate is looking significantly left or right
             cheatingFlags.lookingAway++;
         }
     }
@@ -126,13 +182,21 @@ camera.start();
 // VOICE INPUT
 
 function speak(text) {
-    window.speechSynthesis.cancel(); // ✅ stops previous voice
+    window.speechSynthesis.cancel();
 
     let speech = new SpeechSynthesisUtterance(text);
-
     speech.lang = "en-US";
-    speech.rate = 0.9;
-    speech.pitch = 1.1;
+    speech.rate = 0.85;
+    speech.pitch = 1.0;
+
+    // Force a single consistent voice
+    const voices = window.speechSynthesis.getVoices();
+    // We look for "Google US English" first as it's most consistent across Chrome
+    const preferredVoice = voices.find(v => v.name === "Google US English" || v.name.includes("English United States"));
+
+    if (preferredVoice) {
+        speech.voice = preferredVoice;
+    }
 
     window.speechSynthesis.speak(speech);
 }
@@ -145,12 +209,68 @@ function repeatQuestion() {
 // SPEECH INPUT
 // =======================
 function startListening() {
+    const micBtn = document.getElementById("mic-btn");
+    const answerEl = document.getElementById("answer");
+
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onstart = () => {
+        micBtn.innerText = "🛑 Stop Listening";
+        micBtn.style.backgroundColor = "#ff4d4d";
+    };
+
+    recognition.onresult = (event) => {
+        let finalTranscript = "";
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+            }
+        }
+
+        if (finalTranscript) {
+            // Only update if final to avoid "double word" duplication from interim results
+            answerEl.value += (answerEl.value ? " " : "") + finalTranscript;
+        }
+    };
+
+    recognition.onerror = (event) => {
+        console.error("Speech recognition error", event.error);
+        stopListening();
+    };
+
+    recognition.onend = () => {
+        stopListening();
+    };
+
     recognition.start();
 
-    recognition.onresult = function(event) {
-        document.getElementById("answer").value = event.results[0][0].transcript;
-    };
+    // Store recognition object to stop it later
+    window.currentRecognition = recognition;
+}
+
+function stopListening() {
+    const micBtn = document.getElementById("mic-btn");
+    if (window.currentRecognition) {
+        window.currentRecognition.stop();
+        window.currentRecognition = null;
+    }
+    micBtn.innerText = "🎙 Speak";
+    micBtn.style.backgroundColor = "";
+}
+
+// Update the HTML button to toggle
+// Replace <button onclick="startListening()" id="mic-btn">🎙 Speak</button>
+// with <button onclick="toggleListening()" id="mic-btn">🎙 Speak</button>
+function toggleListening() {
+    if (window.currentRecognition) {
+        stopListening();
+    } else {
+        startListening();
+    }
 }
 
 // =======================
@@ -158,7 +278,34 @@ function startListening() {
 // =======================
 function submitAnswer() {
     const answer = document.getElementById("answer").value;
+    if (!answer) {
+        alert("Please provide an answer first.");
+        return;
+    }
+
+    stopListening();
+
     allAnswers.push(answer);
+
+    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+    document.getElementById("progress-bar").style.width = progress + "%";
+
+    currentQuestionIndex++;
+
+    if (currentQuestionIndex < questions.length) {
+        const nextQ = questions[currentQuestionIndex];
+        document.getElementById("question").innerText = nextQ;
+        speak(nextQ);
+        document.getElementById("answer").value = "";
+    }
+    else {
+        document.getElementById("question").innerText = "Interview Complete!";
+        speak("Thank you for your time. The interview is now complete.");
+
+        // Show the score card button and hide the submit button
+        document.getElementById("submit-btn").style.display = "none";
+        document.getElementById("score-container").style.display = "block";
+    }
 
     fetch("/evaluate-answer", {
         method: "POST",
@@ -167,25 +314,15 @@ function submitAnswer() {
             answer: answer,
             face: faceScore,
             cheating: cheatingFlags,
-            question: questions[currentQuestionIndex]
+            question: questions[currentQuestionIndex - 1]
         })
     })
     .then(res => res.json())
     .then(data => {
-
-        currentQuestionIndex++;
-
-        if (currentQuestionIndex < questions.length) {
-            document.getElementById("question").innerText = questions[currentQuestionIndex];
-            speak(questions[currentQuestionIndex]);   // 🔊 SPEAK NEXT QUESTION
-            document.getElementById("answer").value = "";
-        }
-        else {
+        if (currentQuestionIndex >= questions.length) {
             fetch("/final-evaluation", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     answers: allAnswers,
                     face: faceScore,
@@ -194,11 +331,24 @@ function submitAnswer() {
             })
             .then(res => res.json())
             .then(data => {
-                alert("Final Report:\n" + data.result);
-                window.location.href = "/dashboard";
+                // Store result in session via a proxy or just use a global for the final report
+                window.finalResult = data;
             });
         }
+    });
+}
 
+function viewScoreCard() {
+    // Redirect to final report page
+    // Since the final_evaluation endpoint already updates session on server if we had a specific route
+    // we will call the show-final-report first then redirect
+    fetch("/show-final-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(window.finalResult || {})
+    })
+    .then(() => {
+        window.location.href = "/final-report";
     });
 }
 

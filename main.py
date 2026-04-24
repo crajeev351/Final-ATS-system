@@ -15,7 +15,7 @@ app.secret_key = "secret123"
 
 # API key loaded securely from .env
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
 # Database connection
 def get_db():
@@ -416,16 +416,64 @@ Suggestions for Improvement:
 
 @app.route("/show-final-report", methods=["POST"])
 def show_final_report():
-    session["final_result"] = request.get_json()
-    return {"status": "ok"}
+    if "user" not in session:
+        return {"status": "error", "message": "User not logged in"}, 401
+
+    data = request.get_json()
+    username = session["user"]
+
+    try:
+        import json
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Store the final result in the database for this user
+        # We use LONGTEXT to store the JSON string
+        result_json = json.dumps(data)
+        cursor.execute(
+            "INSERT INTO interview_scores (username, result_json) VALUES (%s, %s)",
+            (username, result_json)
+        )
+        conn.commit()
+        conn.close()
+
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Error saving report: {e}")
+        return {"status": "error", "message": str(e)}, 500
 
 
 @app.route("/final-report")
 def final_report():
-    return render_template(
-        "final_report.html",
-        result=session.get("final_result")
-    )
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    username = session["user"]
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Fetch the latest interview result for this user
+        cursor.execute(
+            "SELECT result_json FROM interview_scores WHERE username=%s ORDER BY created_at DESC LIMIT 1",
+            (username,)
+        )
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            import json
+            result_data = json.loads(row["result_json"])
+            return render_template(
+                "final_report.html",
+                result=result_data
+            )
+        else:
+            return "No interview results found for this user. Please complete an interview first."
+
+    except Exception as e:
+        return f"Error retrieving report: {e}"
 
 
 
