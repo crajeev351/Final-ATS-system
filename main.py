@@ -1,21 +1,20 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import pymysql
 import os
+import json
 from dotenv import load_dotenv
 from pdfminer.high_level import extract_text
 import google.generativeai as genai
 
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(override=True)
 
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-
-
 # API key loaded securely from .env
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.5-flash-lite')
+model = genai.GenerativeModel('gemini-flash-latest')
 
 # Database connection
 def get_db():
@@ -38,7 +37,6 @@ def signup():
         conn = get_db()
         cursor = conn.cursor()
 
-        # Check if user already exists
         cursor.execute("SELECT * FROM users WHERE username=%s", (username,))
         user = cursor.fetchone()
 
@@ -69,7 +67,6 @@ def login():
         conn = get_db()
         cursor = conn.cursor()
 
-        # Check user credentials
         cursor.execute(
             "SELECT * FROM users WHERE username=%s AND password=%s",
             (username, password)
@@ -107,10 +104,8 @@ def dashboard():
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
 
-            # Extract text
             resume_text = extract_text(filepath)
 
-            # AI PROMPT
             prompt = f"""
 You are an ATS system.
 
@@ -142,7 +137,6 @@ Job Description:
             response = model.generate_content(prompt)
             result = response.text
 
-            # Parse AI Output
             score = 0
             matched = []
             missing = []
@@ -204,17 +198,12 @@ def generate_questions():
         if not file or file.filename == "":
             return "Please upload a resume"
 
-        # Save file
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(filepath)
 
-        # Extract text
         resume_text = extract_text(filepath)
-
-        # Limit size
         resume_text = resume_text[:3000]
 
-        # Prompt
         prompt = f"""
 You are a professional technical interviewer.
 
@@ -238,22 +227,18 @@ Resume:
 {resume_text}
 """
 
-        # AI Call
         response = model.generate_content(prompt)
         raw_text = response.text
 
-        # Parse questions
         questions = []
         for line in raw_text.split("\n"):
             line = line.strip()
             if line.startswith(tuple(str(i) + "." for i in range(1, 6))):
                 questions.append(line)
 
-        # Fallback safety
         if not questions:
             questions = ["Tell me about your project"]
 
-        # Store in session
         session["questions"] = questions
 
         return render_template("questions.html", questions=questions)
@@ -267,9 +252,6 @@ def ai_interview():
     if "user" not in session:
         return redirect(url_for("login"))
 
-    
-
-    # Generate basic questions
     prompt = """
 Generate 3 simple HR interview questions.
 
@@ -277,20 +259,18 @@ Rules:
 - Very basic
 - General questions
 - No numbering
+- Return only the questions, one per line
 """
 
     response = model.generate_content(prompt)
     basic_q = [q.strip() for q in response.text.split("\n") if q.strip()]
 
-    # Get resume questions
     resume_q = session.get("questions", [])
-
-    # Merge both
     all_q = basic_q + resume_q
 
     session["all_questions"] = all_q
 
-    return render_template("ai_interview.html")    
+    return render_template("ai_interview.html")
 
 
 @app.route("/evaluate-answer", methods=["POST"])
@@ -298,41 +278,35 @@ def evaluate_answer():
     data = request.get_json()
 
     answer = data.get("answer")
-    face = data.get("face")
+    face = data.get("face", {})
 
     stability = face.get("stability", 0)
-    movement = face.get("movement", 0)
     frames = face.get("frames", 1)
-
     face_score = round((stability / frames) * 5, 2)
 
     prompt = f"""
-You are an AI interviewer.
+You are a CRITICAL Technical Recruiter at a Fortune 500 company. 
+Evaluate this candidate's answer strictly. 
 
-Evaluate candidate based on:
+STRICT SCORING RULES:
+1. If the answer is irrelevant, extremely short (e.g., "hi", "hello", "ok", "I don't know"), or evasive, you MUST give an Overall Score of 0 or 1.
+2. Do not be polite. If the answer doesn't demonstrate technical knowledge for the question asked, it is a fail.
+3. High effort but wrong technical content = 2-3/10.
+4. Correct but brief = 5-6/10.
+5. Expert level with examples = 9-10/10.
 
 Answer:
 {answer}
 
 Facial Behavior:
 - Stability Score: {face_score}
-- Movement Level: {movement}
 
 Give:
-
 Overall Score: out of 10
-
-Technical:
-- ...
-
-Communication:
-- ...
-
-Facial Confidence:
-- ...
-
-Suggestions:
-- ...
+Technical Accuracy: ...
+Relevance: ...
+Communication: ...
+Suggestions: ...
 """
 
     response = model.generate_content(prompt)
@@ -343,93 +317,146 @@ Suggestions:
 def get_questions():
     return {"questions": session.get("all_questions", [])}
 
+
+# ─────────────────────────────────────────────────────────────
 @app.route("/final-evaluation", methods=["POST"])
 def final_evaluation():
     data = request.get_json()
 
-    answers = data.get("answers", [])
-    face = data.get("face", {})
-    cheating = data.get("cheating", {})
+    answers        = data.get("answers", [])
+    face           = data.get("face", {})
+    cheating       = data.get("cheating", {})
+    questions_list = session.get("all_questions", [])
 
-    stability = face.get("stability", 0)
-    frames = face.get("frames", 1)
+    # Biometric Analytics
+    frames     = face.get("frames", 1)
+    stability  = round((face.get("stability", 0) / frames) * 10, 2)
+    blink_rate = face.get("blinkCount", 0)
+    smile      = round((face.get("smileScore", 0) / frames) * 10, 2)
+    articulation = round((face.get("mouthOpening", 0) / frames) * 100, 2)
+    
+    no_face      = cheating.get("noFace", 0)
+    looking_away = cheating.get("lookingAway", 0)
+    reading      = cheating.get("readingDetection", 0)
 
-    face_score = round((stability / frames) * 10, 2)
-
-    cheating_score = (
-        cheating.get("noFace", 0) +
-        cheating.get("multipleFaces", 0) +
-        cheating.get("lookingAway", 0)
-    )
+    # Build Q&A string for the prompt
+    qa_pairs = ""
+    for i, ans in enumerate(answers):
+        q = questions_list[i] if i < len(questions_list) else f"Question {i+1}"
+        qa_pairs += f"Q{i+1}: {q}\nA{i+1}: {ans}\n\n"
 
     prompt = f"""
-You are an AI interviewer.
+You are a SENIOR TECHNICAL RECRUITER and BIOMETRIC ANALYST. 
+Evaluate this candidate's mock interview results using their answers and facial behavior data.
 
-Evaluate the candidate completely.
+BIOMETRIC DATA INTERPRETATION:
+- Stability: {stability}/10 (Higher is more professional/calm)
+- Blink Count: {blink_rate} (Normal is 15-20 per minute. High indicates anxiety. Low indicates script reading.)
+- Smile/Engagement: {smile}/10 (Shows personality and confidence)
+- Mouth Articulation: {articulation} (Confirms active speaking vs mumbling)
+- Reading Detection Flags: {reading} (High flags suggest candidate was reading from a script)
+- Looking Away Flags: {looking_away}
+- No Face Flags: {no_face}
 
-Answers:
-{answers}
+STRICT EVALUATION CRITERIA:
+1. TRUTHFULNESS: If "Reading Detection" is high (>20% of frames), penalize the "conf" and "overall_score" metrics significantly.
+2. CONFIDENCE: Use Blink Count and Stability. High blinks + low stability = Low confidence.
+3. ENGAGEMENT: Use Smile and Articulation scores.
+4. ANSWER QUALITY: As before, Irrelevant/Short answers = 0 or 1.
 
-Face Confidence Score: {face_score}/10
+Q&A:
+{qa_pairs}
 
-Cheating Indicators:
-- No Face Count: {cheating.get("noFace")}
-- Multiple Faces: {cheating.get("multipleFaces")}
-- Looking Away: {cheating.get("lookingAway")}
+Return ONLY valid JSON.
 
-Give output in this format:
-
-Overall Score: /10
-
-Technical Skills:
-- ...
-
-Communication:
-- ...
-
-Confidence:
-- ...
-
-Cheating Analysis:
-- ...
-
-Final Verdict:
-- ...
-
-Suggestions for Improvement:
-- ...
+Return exactly this JSON structure:
+{{
+  "overall_score": <0-10>,
+  "final_verdict": "<Excellent | Good | Average | Needs Improvement | Failed>",
+  "metrics": {{
+    "tech": <0-10>,
+    "comm": <0-10>,
+    "conf": <0-10>
+  }},
+  "behavioral_analysis": {{
+    "observations": "<Strict 2-3 sentence summary incorporating biometric findings like reading detection or anxiety.>",
+    "cheating_risk": "<Low | Medium | High>"
+  }},
+  "qa_analysis": [
+    {{ "question": "...", "answer": "...", "score": <0-10> }}
+  ],
+  "suggestions": [
+    "<suggestion 1>",
+    "<suggestion 2>",
+    "<suggestion 3>"
+  ]
+}}
 """
 
-    response = model.generate_content(prompt)
+    try:
+        response = model.generate_content(prompt)
+        raw = response.text.strip()
 
-    result_text = response.text
+        # Strip markdown fences if Gemini adds them
+        if raw.startswith("```"):
+            parts = raw.split("```")
+            # parts[1] is the block content (may start with "json\n")
+            raw = parts[1]
+            if raw.lower().startswith("json"):
+                raw = raw[4:]
 
-    # Temporary values (you can improve later)
-    data = {
-        "text": result_text,
-        "tech": 7,
-        "comm": 6,
-        "conf": 8
-    }
+        result_data = json.loads(raw.strip())
 
-    return data
+    except Exception as e:
+        print(f"Final evaluation parse error: {e}")
+        result_data = {
+            "overall_score": 5,
+            "final_verdict": "Average",
+            "metrics": {
+                "tech": 5,
+                "comm": 5,
+                "conf": int(face_score)
+            },
+            "behavioral_analysis": {
+                "observations": "Automated analysis could not be parsed. Please retry the interview.",
+                "cheating_risk": "Low" if cheating_total < 10 else "High"
+            },
+            "qa_analysis": [
+                {
+                    "question": questions_list[i] if i < len(questions_list) else f"Question {i+1}",
+                    "answer": ans,
+                    "score": 5
+                }
+                for i, ans in enumerate(answers)
+            ],
+            "suggestions": [
+                "Review your answers carefully.",
+                "Practice speaking clearly and confidently.",
+                "Maintain eye contact with the camera."
+            ]
+        }
 
+    return result_data
+
+
+# ─────────────────────────────────────────────────────────────
+# SAVE REPORT TO DB  –  uses correct table name: interview_scores
+# ─────────────────────────────────────────────────────────────
 @app.route("/show-final-report", methods=["POST"])
 def show_final_report():
     if "user" not in session:
         return {"status": "error", "message": "User not logged in"}, 401
 
-    data = request.get_json()
+    data     = request.get_json()
     username = session["user"]
 
     try:
-        import json
-        conn = get_db()
+        conn   = get_db()
         cursor = conn.cursor()
 
-        # Store the final result in the database for this user
-        # We use LONGTEXT to store the JSON string
         result_json = json.dumps(data)
+
+        # Table name matches what you created in phpMyAdmin: interview_scores
         cursor.execute(
             "INSERT INTO interview_scores (username, result_json) VALUES (%s, %s)",
             (username, result_json)
@@ -438,11 +465,15 @@ def show_final_report():
         conn.close()
 
         return {"status": "ok"}
+
     except Exception as e:
         print(f"Error saving report: {e}")
         return {"status": "error", "message": str(e)}, 500
 
 
+# ─────────────────────────────────────────────────────────────
+# SHOW FINAL REPORT PAGE
+# ─────────────────────────────────────────────────────────────
 @app.route("/final-report")
 def final_report():
     if "user" not in session:
@@ -451,30 +482,25 @@ def final_report():
     username = session["user"]
 
     try:
-        conn = get_db()
+        conn   = get_db()
         cursor = conn.cursor()
 
-        # Fetch the latest interview result for this user
+        # Table name matches what you created in phpMyAdmin: interview_scores
         cursor.execute(
-            "SELECT result_json FROM interview_scores WHERE username=%s ORDER BY created_at DESC LIMIT 1",
+            "SELECT result_json FROM interview_scores WHERE username=%s ORDER BY id DESC LIMIT 1",
             (username,)
         )
         row = cursor.fetchone()
         conn.close()
 
         if row:
-            import json
             result_data = json.loads(row["result_json"])
-            return render_template(
-                "final_report.html",
-                result=result_data
-            )
+            return render_template("final_report.html", result=result_data)
         else:
-            return "No interview results found for this user. Please complete an interview first."
+            return "No interview results found. Please complete an interview first."
 
     except Exception as e:
         return f"Error retrieving report: {e}"
-
 
 
 @app.route('/logout')

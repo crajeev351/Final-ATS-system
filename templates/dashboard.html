@@ -1,37 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ATS Dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Intelligence Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="container">
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">ATS.AI</a>
+        <div class="nav-user">
+            <span style="color: var(--text-muted)">Welcome, <b>{{ session['user'] }}</b></span>
+            <a href="/logout" class="logout-btn">Logout</a>
+        </div>
+    </nav>
 
-    <a href="/logout" class="logout">Logout</a>
+    <div class="container">
+        <h1 class="title">Intelligence Dashboard</h1>
+        <p class="subtitle">Analyze resumes and generate interview questions with AI</p>
 
-    <h2 class="title">🚀 ATS Intelligence Dashboard</h2>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="job_desc">Job Description</label>
+                <textarea id="job_desc" name="job_desc" placeholder="Paste the full job description here to compare with the resume..." required></textarea>
+            </div>
 
-    <div class="user-info">
-        Logged in as: <b>{{ session['user'] }}</b>
+            <div class="form-group">
+                <label for="resume">Upload Resume (PDF)</label>
+                <input type="file" id="resume" name="resume" accept=".pdf" required>
+            </div>
+
+            <div class="button-grid">
+                <button type="submit" class="btn-primary">
+                    ⚡ ATS Score Analysis
+                </button>
+                <button formaction="/generate-questions" formmethod="post" class="btn-secondary">
+                    🧠 Generate Interview Questions
+                </button>
+            </div>
+        </form>
     </div>
-
-    <form method="POST" enctype="multipart/form-data">
-
-
-        <label>Paste Job Description</label>
-        <textarea name="job_desc" placeholder="Paste job description here..."></textarea>
-
-        <label>Upload Resume (PDF only)</label>
-        <input type="file" name="resume">
-
-        <button type="submit">⚡ Generate ATS Score</button>
-        <button formaction="/generate-questions" formmethod="post">
-        🧠 Generate Interview Questions
-        </button>
-    </form>
-
-</div>
 
 </body>
 </html>

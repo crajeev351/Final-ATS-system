@@ -1,358 +1,347 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>AI Mock Interview</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Mock Interview | ATS.AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .container { position: relative; overflow: hidden; }
+        
+        #start-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--card-bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        #progress-bar-container {
+            width: 100%;
+            background: var(--bg-dark);
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+            height: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        #video-container {
+            position: relative;
+            margin: 2rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        video {
+            border-radius: 1rem;
+            border: 2px solid var(--border);
+            width: 100%;
+            max-width: 400px;
+            background: #000;
+        }
+
+        #face-status {
+            position: absolute;
+            top: 1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+        }
+
+        #speaking-indicator {
+            position: absolute;
+            bottom: 1rem;
+            right: calc(50% - 190px);
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            display: none;
+            box-shadow: 0 0 15px #10b981;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.5); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.5; }
+        }
+
+        .speaking { animation: pulse 1s infinite; display: block !important; }
+
+        textarea { margin-top: 1rem; }
+    </style>
 </head>
 <body>
 
-<div class="container">
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">ATS.AI</a>
+    </nav>
 
-    <h2 class="title">🎤 AI Mock Interview</h2>
+    <div class="container">
+        <h2 class="title">AI Mock Interview</h2>
+        <p class="subtitle">Focus on the camera and speak clearly</p>
 
-    <!-- Start Interview Overlay -->
-    <div id="start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.95); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-radius: 15px;">
-        <h3 style="font-size: 1.5rem; margin-bottom: 10px;">Ready to start your interview?</h3>
-        <p style="margin-bottom: 20px; color: #666;">Please ensure your camera is on and you are in a quiet environment.</p>
-        <button onclick="beginInterview()" style="padding: 15px 30px; font-size: 1.2rem; background: #4CAF50; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🚀 Start Interview</button>
+        <!-- Start Interview Overlay -->
+        <div id="start-overlay">
+            <div style="font-size: 3rem; margin-bottom: 1.5rem;">🎤</div>
+            <h3 class="title" style="font-size: 1.5rem;">Ready to Begin?</h3>
+            <p class="subtitle" style="max-width: 300px; margin: 0 auto 2rem;">Ensure your microphone and camera are active. We will evaluate your technical depth and confidence.</p>
+            <button onclick="beginInterview()" class="btn-primary" style="width: auto; padding-left: 3rem; padding-right: 3rem;">
+                🚀 Start Session
+            </button>
+        </div>
+
+        <div id="progress-bar-container">
+            <div id="progress-bar"></div>
+        </div>
+
+        <p id="question" style="font-size: 1.125rem; font-weight: 600; min-height: 4em; color: var(--text-main); line-height: 1.5; text-align: center; padding: 0 1rem;">
+            Initialising AI interviewer...
+        </p>
+
+        <div id="video-container">
+            <video id="video" autoplay muted></video>
+            <div id="face-status">Checking Camera...</div>
+            <div id="speaking-indicator"></div>
+        </div>
+
+        <textarea id="answer" placeholder="Click '🎙 Click to Speak' or type your answer directly here..." style="width: 100%; margin-top: 20px; height: 120px; border-radius: 10px; border: 1px solid var(--border); padding: 15px; font-family: inherit; background: var(--bg-dark); color: var(--text-main); line-height: 1.6;"></textarea>
+
+        <div class="button-grid" style="grid-template-columns: 1fr 2fr 1fr;">
+            <button onclick="repeatQuestion()" class="btn-secondary">🔊 Repeat</button>
+            <button onclick="toggleListening()" id="mic-btn" class="btn-primary" style="background: var(--accent);">🎙 Click to Speak</button>
+            <button onclick="submitAnswer()" id="submit-btn" class="btn-primary">Next →</button>
+        </div>
+
+        <div id="score-container" style="display: none; text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+            <button onclick="viewScoreCard()" id="view-score-btn" class="btn-primary" style="width: 100%;">
+                📊 Generate Performance Report
+            </button>
+            <p id="saving-msg" style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem;">Generating metrics...</p>
+        </div>
     </div>
 
-    <!-- Progress Bar -->
-    <div style="width: 100%; background: #eee; border-radius: 10px; margin-bottom: 20px;">
-        <div id="progress-bar" style="width: 0%; height: 10px; background: #4CAF50; border-radius: 10px; transition: width 0.3s;"></div>
-    </div>
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
 
-    <!-- Question -->
-    <p id="question" style="font-size: 1.2rem; font-weight: bold; min-height: 3em;">Welcome! Click the button to start.</p>
-
-    <!-- Camera -->
-    <div style="position: relative; display: inline-block;">
-        <video id="video" width="300" autoplay style="border-radius: 10px; border: 3px solid #ddd;"></video>
-        <div id="face-status" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 5px 10px; border-radius: 5px; font-size: 12px;">Checking Face...</div>
-    </div>
-
-    <!-- Answer -->
-    <textarea id="answer" placeholder="Your answer will appear here after speaking..." style="width: 100%; margin-top: 20px; height: 100px;"></textarea>
-
-    <br><br>
-
-    <div class="controls" style="display: flex; gap: 10px; justify-content: center;">
-        <button onclick="toggleListening()" id="mic-btn">🎙 Speak</button>
-        <button onclick="submitAnswer()" id="submit-btn">Submit Answer</button>
-        <button onclick="repeatQuestion()">🔊 Repeat</button>
-    </div>
-    <div id="score-container" style="display: none; text-align: center; margin-top: 20px;">
-        <button onclick="viewScoreCard()" style="padding: 15px 30px; font-size: 1.2rem; background: #2196F3; color: white; border: none; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">📊 View My Score Card</button>
-    </div>
-
-</div>
-
-<!-- MediaPipe -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-
-<script>
-
-// =======================
-// VARIABLES
-// =======================
-let questions = [];
-let currentQuestionIndex = 0;
-
-let faceScore = {
-    stability: 0,
-    movement: 0,
-    frames: 0
-};
-
-let cheatingFlags = {
-    noFace: 0,
-    multipleFaces: 0,
-    lookingAway: 0
-};
-
-let allAnswers = [];
-
-// =======================
-// LOAD QUESTIONS
-// =======================
-fetch("/get-all-questions")
-.then(res => res.json())
-.then(data => {
-    questions = data.questions;
-    if (questions.length > 0) {
-        document.getElementById("question").innerText = "Ready! Click 'Start Interview' to begin.";
-    } else {
-        document.getElementById("question").innerText = "No questions found";
-    }
-});
-
-function beginInterview() {
-    document.getElementById("start-overlay").style.display = "none";
-    if (questions.length > 0) {
-        document.getElementById("question").innerText = questions[0];
-        speak(questions[0]);
-    }
-}
-
-// =======================
-// CAMERA START
-// =======================
-const videoElement = document.getElementById("video");
-
-navigator.mediaDevices.getUserMedia({ video: true })
-.then(stream => {
-    videoElement.srcObject = stream;
-});
-
-// =======================
-// FACE TRACKING LOGIC
-// =======================
-const faceMesh = new FaceMesh({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-});
-
-faceMesh.setOptions({
-    maxNumFaces: 1,
-    refineLandmarks: true,
-    minDetectionConfidence: 0.5,
-    minTrackingConfidence: 0.5
-});
-
-let lastFaceCenter = { x: 0, y: 0 };
-
-faceMesh.onResults(results => {
-    const statusEl = document.getElementById("face-status");
-
-    if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-        statusEl.innerText = "❌ No Face Detected";
-        statusEl.style.color = "red";
-        cheatingFlags.noFace++;
-    }
-    else if (results.multiFaceLandmarks.length > 1) {
-        statusEl.innerText = "⚠️ Multiple Faces";
-        statusEl.style.color = "orange";
-        cheatingFlags.multipleFaces++;
-    }
-    else {
-        statusEl.innerText = "✅ Face Tracked";
-        statusEl.style.color = "lime";
-
-        const landmarks = results.multiFaceLandmarks[0];
-
-        // 1. Stability Analysis (Center of face movement)
-        const center = {
-            x: landmarks[1].x, // Nose tip
-            y: landmarks[1].y
+    <script>
+        let questions = [];
+        let currentQuestionIndex = 0;
+        let voices = [];
+        let allAnswers = [];
+        let faceScore = { 
+            stability: 0, 
+            movement: 0, 
+            frames: 0,
+            mouthOpening: 0,
+            smileScore: 0,
+            blinkCount: 0,
+            gazeCenter: 0,
+            postureScore: 0 
         };
+        let cheatingFlags = { 
+            noFace: 0, 
+            multipleFaces: 0, 
+            lookingAway: 0,
+            readingDetection: 0 
+        };
+        let eyeClosed = false;
+        let lastGazeX = 0.5;
 
-        const dist = Math.sqrt(Math.pow(center.x - lastFaceCenter.x, 2) + Math.pow(center.y - lastFaceCenter.y, 2));
-        if (dist < 0.02) {
-            faceScore.stability++;
-        }
-        faceScore.movement += dist;
-        lastFaceCenter = center;
-        faceScore.frames++;
+        function loadVoices() { voices = window.speechSynthesis.getVoices(); }
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
 
-        // 2. Gaze/Looking Away Detection (Simple Head Pose)
-        // Compare nose tip (1) relative to left/right eye corners (33, 263)
-        const leftEye = landmarks[33];
-        const rightEye = landmarks[263];
-        const nose = landmarks[1];
+        fetch("/get-all-questions").then(res => res.json()).then(data => {
+            questions = data.questions;
+            if (questions.length > 0) document.getElementById("question").innerText = "Camera Ready. Start the session when you are comfortable.";
+            else document.getElementById("question").innerText = "No questions found. Please return to dashboard.";
+        });
 
-        const midEyeX = (leftEye.x + rightEye.x) / 2;
-        const gazeDiff = Math.abs(nose.x - midEyeX);
-
-        if (gazeDiff > 0.05) { // Candidate is looking significantly left or right
-            cheatingFlags.lookingAway++;
-        }
-    }
-});
-
-const camera = new Camera(videoElement, {
-    onFrame: async () => {
-        await faceMesh.send({ image: videoElement });
-    },
-    width: 640,
-    height: 480
-});
-
-camera.start();
-
-// VOICE INPUT
-
-function speak(text) {
-    window.speechSynthesis.cancel();
-
-    let speech = new SpeechSynthesisUtterance(text);
-    speech.lang = "en-US";
-    speech.rate = 0.85;
-    speech.pitch = 1.0;
-
-    // Force a single consistent voice
-    const voices = window.speechSynthesis.getVoices();
-    // We look for "Google US English" first as it's most consistent across Chrome
-    const preferredVoice = voices.find(v => v.name === "Google US English" || v.name.includes("English United States"));
-
-    if (preferredVoice) {
-        speech.voice = preferredVoice;
-    }
-
-    window.speechSynthesis.speak(speech);
-}
-
-function repeatQuestion() {
-    speak(questions[currentQuestionIndex]);
-}
-
-// =======================
-// SPEECH INPUT
-// =======================
-function startListening() {
-    const micBtn = document.getElementById("mic-btn");
-    const answerEl = document.getElementById("answer");
-
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onstart = () => {
-        micBtn.innerText = "🛑 Stop Listening";
-        micBtn.style.backgroundColor = "#ff4d4d";
-    };
-
-    recognition.onresult = (event) => {
-        let finalTranscript = "";
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
+        function beginInterview() {
+            document.getElementById("start-overlay").style.display = "none";
+            if (questions.length > 0) {
+                let firstQ = "Welcome to your AI assessment. Let's start with the first question. " + questions[0];
+                document.getElementById("question").innerText = questions[0];
+                speak(firstQ);
             }
         }
 
-        if (finalTranscript) {
-            // Only update if final to avoid "double word" duplication from interim results
-            answerEl.value += (answerEl.value ? " " : "") + finalTranscript;
+        const videoElement = document.getElementById("video");
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { videoElement.srcObject = stream; });
+
+        const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+
+        let lastFaceCenter = { x: 0, y: 0 };
+        faceMesh.onResults(results => {
+            const statusEl = document.getElementById("face-status");
+            if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
+                statusEl.innerText = "❌ No Face Detected"; statusEl.style.color = "#ef4444"; cheatingFlags.noFace++;
+            } else if (results.multiFaceLandmarks.length > 1) {
+                statusEl.innerText = "⚠️ Multiple Faces"; statusEl.style.color = "#f59e0b"; cheatingFlags.multipleFaces++;
+            } else {
+                statusEl.innerText = "✅ Monitoring Active"; statusEl.style.color = "#10b981";
+                const landmarks = results.multiFaceLandmarks[0];
+                faceScore.frames++;
+
+                // 1. Posture & Stability
+                const nose = landmarks[1];
+                const dist = Math.sqrt(Math.pow(nose.x - lastFaceCenter.x, 2) + Math.pow(nose.y - lastFaceCenter.y, 2));
+                if (dist < 0.02) faceScore.stability++;
+                lastFaceCenter = nose;
+
+                // 2. Iris Gaze Tracking (Detects Reading)
+                const leftIris = landmarks[468];
+                const rightIris = landmarks[473];
+                const gazeX = (leftIris.x + rightIris.x) / 2;
+                
+                if (Math.abs(gazeX - lastGazeX) > 0.01) {
+                    faceScore.gazeCenter++;
+                    if (dist < 0.005 && Math.abs(gazeX - lastGazeX) > 0.02) {
+                        cheatingFlags.readingDetection++;
+                    }
+                }
+                lastGazeX = gazeX;
+
+                // 3. Blink Detection (Simplified EAR)
+                const leftUpperLid = landmarks[159];
+                const leftLowerLid = landmarks[145];
+                const eyeDist = Math.abs(leftUpperLid.y - leftLowerLid.y);
+                
+                if (eyeDist < 0.015 && !eyeClosed) {
+                    eyeClosed = true;
+                    faceScore.blinkCount++;
+                } else if (eyeDist > 0.02) {
+                    eyeClosed = false;
+                }
+
+                // 4. Mouth Articulation
+                const topLip = landmarks[13];
+                const bottomLip = landmarks[14];
+                faceScore.mouthOpening += Math.abs(topLip.y - bottomLip.y);
+
+                // 5. Smile/Engagement
+                const mouthWidth = Math.abs(landmarks[61].x - landmarks[291].x);
+                if (mouthWidth > 0.15) faceScore.smileScore++;
+
+                // 6. Head Pose (Looking Away)
+                const midEyeX = (landmarks[33].x + landmarks[263].x) / 2;
+                if (Math.abs(nose.x - midEyeX) > 0.06) cheatingFlags.lookingAway++;
+            }
+        });
+
+        new Camera(videoElement, { onFrame: async () => { await faceMesh.send({ image: videoElement }); }, width: 640, height: 480 }).start();
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            let speech = new SpeechSynthesisUtterance(text);
+            speech.lang = "en-US"; speech.rate = 0.95;
+            const indicator = document.getElementById("speaking-indicator");
+            speech.onstart = () => { indicator.classList.add("speaking"); };
+            speech.onend = () => { indicator.classList.remove("speaking"); };
+            if (voices.length === 0) voices = window.speechSynthesis.getVoices();
+            const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("David") || v.name.includes("English United States"));
+            if (preferredVoice) speech.voice = preferredVoice;
+            window.speechSynthesis.speak(speech);
         }
-    };
 
-    recognition.onerror = (event) => {
-        console.error("Speech recognition error", event.error);
-        stopListening();
-    };
+        function repeatQuestion() { speak(questions[currentQuestionIndex]); }
 
-    recognition.onend = () => {
-        stopListening();
-    };
+        function startListening() {
+            const micBtn = document.getElementById("mic-btn");
+            const answerEl = document.getElementById("answer");
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.continuous = true; recognition.interimResults = true; recognition.lang = "en-US";
+            recognition.onstart = () => { micBtn.innerText = "🛑 Stop Recording"; micBtn.style.background = "#ef4444"; };
+            recognition.onresult = (event) => {
+                let finalTranscript = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
+                if (finalTranscript) answerEl.value += (answerEl.value ? " " : "") + finalTranscript;
+            };
+            recognition.onend = () => { stopListening(); };
+            recognition.start(); window.currentRecognition = recognition;
+        }
 
-    recognition.start();
+        function stopListening() {
+            const micBtn = document.getElementById("mic-btn");
+            if (window.currentRecognition) { window.currentRecognition.stop(); window.currentRecognition = null; }
+            micBtn.innerText = "🎙 Click to Speak"; micBtn.style.background = "var(--accent)";
+        }
 
-    // Store recognition object to stop it later
-    window.currentRecognition = recognition;
-}
+        function toggleListening() { if (window.currentRecognition) stopListening(); else startListening(); }
 
-function stopListening() {
-    const micBtn = document.getElementById("mic-btn");
-    if (window.currentRecognition) {
-        window.currentRecognition.stop();
-        window.currentRecognition = null;
-    }
-    micBtn.innerText = "🎙 Speak";
-    micBtn.style.backgroundColor = "";
-}
+        function submitAnswer() {
+            const answer = document.getElementById("answer").value;
+            if (!answer) { alert("Please provide an answer first."); return; }
+            
+            stopListening();
+            allAnswers.push(answer);
+            
+            document.getElementById("progress-bar").style.width = ((currentQuestionIndex + 1) / questions.length) * 100 + "%";
+            currentQuestionIndex++;
 
-// Update the HTML button to toggle
-// Replace <button onclick="startListening()" id="mic-btn">🎙 Speak</button>
-// with <button onclick="toggleListening()" id="mic-btn">🎙 Speak</button>
-function toggleListening() {
-    if (window.currentRecognition) {
-        stopListening();
-    } else {
-        startListening();
-    }
-}
+            // REMOVED individual answer evaluation to save API quota
+            
+            if (currentQuestionIndex < questions.length) {
+                const nextQ = questions[currentQuestionIndex];
+                const transitions = ["Excellent. ", "Moving on. ", "Next question. ", "I see. "];
+                
+                document.getElementById("question").style.opacity = 0;
+                setTimeout(() => {
+                    document.getElementById("question").innerText = nextQ;
+                    document.getElementById("question").style.opacity = 1;
+                    speak(transitions[Math.floor(Math.random() * transitions.length)] + nextQ);
+                }, 300);
+                document.getElementById("answer").value = "";
+            } else {
+                finishInterview();
+            }
+        }
 
-// =======================
-// SUBMIT ANSWER
-// =======================
-function submitAnswer() {
-    const answer = document.getElementById("answer").value;
-    if (!answer) {
-        alert("Please provide an answer first.");
-        return;
-    }
-
-    stopListening();
-
-    allAnswers.push(answer);
-
-    const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
-    document.getElementById("progress-bar").style.width = progress + "%";
-
-    currentQuestionIndex++;
-
-    if (currentQuestionIndex < questions.length) {
-        const nextQ = questions[currentQuestionIndex];
-        document.getElementById("question").innerText = nextQ;
-        speak(nextQ);
-        document.getElementById("answer").value = "";
-    }
-    else {
-        document.getElementById("question").innerText = "Interview Complete!";
-        speak("Thank you for your time. The interview is now complete.");
-
-        // Show the score card button and hide the submit button
-        document.getElementById("submit-btn").style.display = "none";
-        document.getElementById("score-container").style.display = "block";
-    }
-
-    fetch("/evaluate-answer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            answer: answer,
-            face: faceScore,
-            cheating: cheatingFlags,
-            question: questions[currentQuestionIndex - 1]
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (currentQuestionIndex >= questions.length) {
-            fetch("/final-evaluation", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    answers: allAnswers,
-                    face: faceScore,
-                    cheating: cheatingFlags
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                // Store result in session via a proxy or just use a global for the final report
+        function finishInterview() {
+            document.getElementById("question").innerText = "Assessment Concluded";
+            speak("Thank you. I am processing your performance metrics now.");
+            document.getElementById("submit-btn").style.display = "none";
+            document.getElementById("mic-btn").style.display = "none";
+            document.getElementById("score-container").style.display = "block";
+            document.getElementById("view-score-btn").disabled = true; document.getElementById("view-score-btn").style.opacity = "0.5";
+            fetch("/final-evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers: allAnswers, face: faceScore, cheating: cheatingFlags }) })
+            .then(res => res.json()).then(data => {
                 window.finalResult = data;
+                return fetch("/show-final-report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+            }).then(() => {
+                document.getElementById("view-score-btn").disabled = false; document.getElementById("view-score-btn").style.opacity = "1";
+                document.getElementById("saving-msg").innerText = "Analysis Complete!";
             });
         }
-    });
-}
 
-function viewScoreCard() {
-    // Redirect to final report page
-    // Since the final_evaluation endpoint already updates session on server if we had a specific route
-    // we will call the show-final-report first then redirect
-    fetch("/show-final-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(window.finalResult || {})
-    })
-    .then(() => {
-        window.location.href = "/final-report";
-    });
-}
-
-</script>
-
+        function viewScoreCard() { window.location.href = "/final-report"; }
+    </script>
 </body>
 </html>

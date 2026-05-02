@@ -1,62 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>ATS Result</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATS Analysis Result | ATS.AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="report-container">
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">ATS.AI</a>
+    </nav>
 
-    <div class="header-section">
-        <h2>🚀 ATS Analysis Result</h2>
-        <p>AI Resume Match Report</p>
+    <div class="report-container">
+
+        <div class="header-section">
+            <h2>Analysis Report</h2>
+            <p>Artificial Intelligence Resume Validation</p>
+        </div>
+
+        <div class="score-box">
+            <div class="score">{{ score }}%</div>
+            <div class="score-label">Match Probability Score</div>
+        </div>
+
+        <div class="section section-matched">
+            <h3>✅ Matched Skills</h3>
+            <ul>
+                {% for skill in matched %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section section-missing">
+            <h3>❌ Missing Skills</h3>
+            <ul>
+                {% for skill in missing %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section section-suggestions">
+            <h3>💡 AI Suggestions</h3>
+            <ul>
+                {% for tip in suggestions %}
+                    <li>{{ tip }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="actions">
+            <button onclick="window.print()" class="btn">Download Report PDF</button>
+            <a href="/dashboard" class="back-link">← Analyze Another Resume</a>
+        </div>
+
     </div>
-
-    <!-- ✅ Match Score -->
-    <div class="score-box">
-        <div class="score">{{ score }}%</div>
-        <p>Match Percentage</p>
-    </div>
-
-    <!-- ✅ Matched Skills -->
-    <div class="section">
-        <h3>✅ Matched Skills</h3>
-        <ul>
-            {% for skill in matched %}
-                <li>{{ skill }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <!-- ❌ Missing Skills -->
-    <div class="section">
-        <h3>❌ Missing Skills</h3>
-        <ul>
-            {% for skill in missing %}
-                <li>{{ skill }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <!-- 💡 Suggestions -->
-    <div class="section">
-        <h3>💡 Suggestions</h3>
-        <ul>
-            {% for tip in suggestions %}
-                <li>{{ tip }}</li>
-            {% endfor %}
-        </ul>
-    </div>
-
-    <!-- Buttons -->
-    <div style="text-align:center;">
-        <button onclick="window.print()" class="btn">Download PDF</button>
-        <br><br>
-        <a href="/dashboard">← Analyze Another Resume</a>
-    </div>
-
-</div>
 
 </body>
 </html>

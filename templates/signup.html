@@ -1,27 +1,32 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Sign Up</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account | ATS.AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
 <div class="container">
-    <h2 class="title">Create Account</h2>
+    <a href="/" class="logo">ATS.AI</a>
+    <h2 class="title">Get Started</h2>
+    <p class="subtitle">Experience AI-driven career acceleration</p>
 
     {% if message %}
-        <p class="message">{{ message }}</p>
+        <div class="message">{{ message }}</div>
     {% endif %}
 
     <form method="POST">
-        <input type="text" name="username" placeholder="Username" required>
-        <input type="password" name="password" placeholder="Password" required>
+        <input type="text" name="username" placeholder="Choose a Username" required autocomplete="username">
+        <input type="password" name="password" placeholder="Create a Password" required autocomplete="new-password">
 
-        <button class="signup-btn">Sign Up</button>
+        <button type="submit">Create Account</button>
     </form>
 
-    <p>
-        Already have an account? <a href="/login">Login</a>
+    <p class="footer-text">
+        Already have an account? <a href="/login">Sign in here</a>
     </p>
 </div>
 

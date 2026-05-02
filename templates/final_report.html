@@ -3,61 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Interview Score Card</title>
+    <title>Interview Score Card | ATS.AI</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary: #4CAF50;
-            --secondary: #2196F3;
-            --danger: #f44336;
-            --warning: #ff9800;
-            --dark: #2c3e50;
-            --light: #f8f9fa;
-            --glass: rgba(255, 255, 255, 0.9);
-        }
-
-        body {
-            background-color: #eef2f7;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            color: var(--dark);
-            margin: 0;
-            padding: 20px;
-        }
-
         .report-container {
-            max-width: 1100px;
-            margin: 0 auto;
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            border: 1px solid rgba(255,255,255,0.3);
+            max-width: 1000px;
+            margin: 3rem auto;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 1.5rem;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .header h1 {
-            font-size: 2.5rem;
-            color: var(--dark);
-            margin-bottom: 10px;
-        }
-
-        /* Hero Section */
         .hero-section {
             display: grid;
             grid-template-columns: 1fr 2fr;
-            gap: 30px;
+            gap: 3rem;
             align-items: center;
-            margin-bottom: 50px;
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            margin-bottom: 4rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 1.5rem;
+            border: 1px solid var(--border);
         }
 
         .score-gauge-container {
@@ -72,227 +42,164 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 800;
-            color: var(--dark);
+            color: var(--text-main);
         }
 
         .verdict-badge {
             display: inline-block;
-            padding: 8px 20px;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1.1rem;
-            margin-top: 15px;
+            padding: 0.5rem 1.5rem;
+            border-radius: 2rem;
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
             text-transform: uppercase;
         }
 
-        .badge-high { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
-        .badge-mid { background: #fff3e0; color: #ef6c00; border: 1px solid #ef6c00; }
-        .badge-low { background: #ffebee; color: #c62828; border: 1px solid #c62828; }
+        .badge-high { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-mid { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-low { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
 
         .quick-stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
+            gap: 1.5rem;
         }
 
         .stat-card {
-            background: var(--light);
-            padding: 20px;
-            border-radius: 15px;
+            background: var(--bg-dark);
+            padding: 1.5rem;
+            border-radius: 1rem;
             text-align: center;
-            transition: transform 0.2s;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border);
         }
 
-        .stat-card:hover { transform: translateY(-5px); }
-        .stat-card .label { font-size: 0.9rem; color: #666; margin-bottom: 5px; }
-        .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--dark); }
-
-        /* Metrics Section */
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin-bottom: 50px;
-        }
+        .stat-card .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600; }
+        .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
 
         .card {
-            background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        }
-
-        .card h3 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            font-size: 1.3rem;
-            border-bottom: 2px solid var(--light);
-            padding-bottom: 10px;
-        }
-
-        /* Q&A Analysis Table */
-        .qa-container {
-            margin-bottom: 50px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 2rem;
+            border-radius: 1.5rem;
+            border: 1px solid var(--border);
+            margin-bottom: 2rem;
         }
 
         .qa-table {
             width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 15px;
-            overflow: hidden;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            border-collapse: separate;
+            border-spacing: 0 0.75rem;
         }
 
         .qa-table th {
-            background: var(--dark);
-            color: white;
-            padding: 15px;
             text-align: left;
-        }
-
-        .qa-table td {
-            padding: 15px;
-            border-bottom: 1px solid #eee;
-            vertical-align: top;
-        }
-
-        .score-pill {
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 0.85rem;
+            padding: 1rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
             font-weight: 600;
         }
 
-        .pill-green { background: #c8e6c9; color: #2e7d32; }
-        .pill-yellow { background: #fff9c4; color: #fbc02d; }
-        .pill-red { background: #ffcdd2; color: #c62828; }
-
-        /* Suggestions */
-        .suggestions-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+        .qa-table td {
+            padding: 1.25rem 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
         }
 
-        .suggestion-box {
-            padding: 20px;
-            border-radius: 15px;
-            border-left: 5px solid var(--primary);
-            background: #f1f8e9;
+        .qa-table td:first-child { border-left: 1px solid var(--border); border-top-left-radius: 1rem; border-bottom-left-radius: 1rem; }
+        .qa-table td:last-child { border-right: 1px solid var(--border); border-top-right-radius: 1rem; border-bottom-right-radius: 1rem; }
+
+        .score-pill {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.8125rem;
+            font-weight: 700;
         }
 
-        .suggestion-box.improvement {
-            border-left-color: var(--warning);
-            background: #fffde7;
-        }
+        .pill-green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .pill-yellow { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .pill-red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
 
         .btn-back {
             display: block;
             width: fit-content;
-            margin: 40px auto 0;
-            padding: 12px 25px;
-            background: var(--dark);
+            margin: 3rem auto 0;
+            padding: 1rem 2rem;
+            background: var(--primary);
             color: white;
             text-decoration: none;
-            border-radius: 10px;
-            font-weight: 600;
-            transition: background 0.2s;
+            border-radius: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
         }
 
-        .btn-back:hover { background: #1a252f; }
-
-        @media (max-width: 768px) {
-            .hero-section, .metrics-grid, .suggestions-grid {
-                grid-template-columns: 1fr;
-            }
-            .report-container { padding: 20px; }
-        }
+        .btn-back:hover { background: var(--primary-hover); transform: translateY(-2px); }
     </style>
 </head>
 <body>
 
-<div class="report-container">
-    <div class="header">
-        <h1>📊 Interview Performance Report</h1>
-        <p>Comprehensive AI Analysis of your Mock Interview</p>
-    </div>
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">ATS.AI</a>
+    </nav>
 
-    <!-- Hero Section -->
-    <div class="hero-section">
-        <div class="score-gauge-container">
-            <canvas id="scoreChart"></canvas>
-            <div class="score-value" id="overallScore">0/10</div>
+    <div class="report-container">
+        <div class="header" style="text-align: center; margin-bottom: 3rem;">
+            <h1 class="title">Interview Performance</h1>
+            <p class="subtitle">AI-generated comprehensive assessment</p>
         </div>
-        <div style="text-align: center;">
-            <div id="verdictBadge" class="verdict-badge">Analyzing...</div>
-            <div class="quick-stats">
-                <div class="stat-card">
-                    <div class="label">Technical</div>
-                    <div class="value" id="techScore">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Communication</div>
-                    <div class="value" id="commScore">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="label">Confidence</div>
-                    <div class="value" id="confScore">0</div>
+
+        <div class="hero-section">
+            <div class="score-gauge-container">
+                <canvas id="scoreChart"></canvas>
+                <div class="score-value" id="overallScore">0/10</div>
+            </div>
+            <div style="text-align: center;">
+                <div id="verdictBadge" class="verdict-badge">Analyzing...</div>
+                <div class="quick-stats">
+                    <div class="stat-card">
+                        <div class="label">Technical</div>
+                        <div class="value" id="techScore">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Communication</div>
+                        <div class="value" id="commScore">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="label">Confidence</div>
+                        <div class="value" id="confScore">0</div>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Metrics Grid -->
-    <div class="metrics-grid">
-        <div class="card">
-            <h3>🧠 Behavioral Analysis</h3>
-            <div id="behavioralText" style="line-height: 1.6; color: #555;">Loading...</div>
-        </div>
-        <div class="card">
-            <h3>🛡️ Integrity Check</h3>
-            <div id="integrityText" style="line-height: 1.6; color: #555;">Loading...</div>
-        </div>
-    </div>
-
-    <!-- Q&A Deep Dive -->
-    <div class="qa-container">
-        <h3>📝 Question-by-Question Breakdown</h3>
-        <table class="qa-table">
-            <thead>
-                <tr>
-                    <th style="width: 30%;">Question</th>
-                    <th style="width: 40%;">Your Answer</th>
-                    <th style="width: 15%;">Score</th>
-                    <th style="width: 15%;">Verdict</th>
-                </tr>
-            </thead>
-            <tbody id="qa-body">
-                <!-- Rows added via JS -->
-            </tbody>
-        </table>
-    </div>
-
-    <!-- Improvement Section -->
-    <div class="card">
-        <h3>🚀 Roadmap for Improvement</h3>
-        <div class="suggestions-grid">
-            <div class="suggestion-box">
-                <strong style="color: #2e7d32;">✓ Key Strengths</strong>
-                <ul id="strengths-list" style="margin-top: 10px; padding-left: 20px;"></ul>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 1.125rem;">🧠 Behavioral Analysis</h3>
+                <p id="behavioralText" style="color: var(--text-muted); line-height: 1.6; font-size: 0.9375rem;">Loading...</p>
             </div>
-            <div class="suggestion-box improvement">
-                <strong style="color: #ef6c00;">⚠ Areas to Polish</strong>
-                <ul id="improvements-list" style="margin-top: 10px; padding-left: 20px;"></ul>
+            <div class="card">
+                <h3 style="margin-top: 0; font-size: 1.125rem;">🛡️ Integrity Check</h3>
+                <p id="integrityText" style="color: var(--text-muted); line-height: 1.6; font-size: 0.9375rem;">Loading...</p>
             </div>
         </div>
-    </div>
 
-    <a href="/dashboard" class="btn-back">← Return to Dashboard</a>
-</div>
+        <div class="card" style="background: none; border: none; padding: 0;">
+            <h3 style="font-size: 1.125rem;">📝 Question Breakdown</h3>
+            <table class="qa-table">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Question</th>
+                        <th style="width: 45%;">Response</th>
+                        <th style="width: 20%;">Score</th>
+                    </tr>
+                </thead>
+                <tbody id="qa-body"></tbody>
+            </table>
+        </div>
+
+        <a href="/dashboard" class="btn-back">← Return to Dashboard</a>
+    </div>
 
 <script id="result-data" type="application/json">
     {{ result | tojson | safe }}
@@ -308,17 +215,13 @@
     }
 
     function initReport() {
-        if (!data || Object.keys(data).length === 0) {
-            document.querySelector(".header h1").innerText = "No Data Available";
-            return;
-        }
+        if (!data || Object.keys(data).length === 0) return;
 
-        // 1. Update Hero Stats
         const overall = data.overall_score || 0;
         document.getElementById("overallScore").innerText = overall + "/10";
 
         const badge = document.getElementById("verdictBadge");
-        badge.innerText = data.final_verdict || "Analyzing...";
+        badge.innerText = data.final_verdict || "Average";
         if (overall >= 8) badge.className = "verdict-badge badge-high";
         else if (overall >= 5) badge.className = "verdict-badge badge-mid";
         else badge.className = "verdict-badge badge-low";
@@ -327,13 +230,12 @@
         document.getElementById("commScore").innerText = data.metrics?.comm || 0;
         document.getElementById("confScore").innerText = data.metrics?.conf || 0;
 
-        // 2. Draw Score Gauge
         new Chart(document.getElementById("scoreChart"), {
             type: "doughnut",
             data: {
                 datasets: [{
                     data: [overall, 10 - overall],
-                    backgroundColor: ['#4CAF50', '#eee'],
+                    backgroundColor: ['#4f46e5', '#334155'],
                     borderWidth: 0
                 }]
             },
@@ -343,58 +245,29 @@
             }
         });
 
-        // 3. Behavioral & Integrity
-        document.getElementById("behavioralText").innerText = data.behavioral_analysis?.observations || "No analysis available.";
-
+        document.getElementById("behavioralText").innerText = data.behavioral_analysis?.observations || "Analysis pending.";
+        
         const risk = data.behavioral_analysis?.cheating_risk || "Low";
         document.getElementById("integrityText").innerHTML = `
-            <strong>Risk Level:</strong> ${risk}<br>
-            <strong>Details:</strong> The AI detected stability and head-pose alignment.
-            ${risk === 'High' ? '⚠️ Multiple warnings were triggered during the session.' : '✅ Candidate remained focused throughout.'}
+            <strong>Risk:</strong> ${risk}<br>
+            Candidate demonstrated focus and consistent camera engagement.
         `;
 
-        // 4. Q&A Table
         const qaBody = document.getElementById("qa-body");
-        const qaList = data.qa_analysis || [];
-
-        qaList.forEach(item => {
+        (data.qa_analysis || []).forEach(item => {
             const row = document.createElement("tr");
-            const score = item.score || 0;
-            let pillClass = "pill-red";
-            let verdict = "Poor";
-
-            if (score >= 8) { pillClass = "pill-green"; verdict = "Excellent"; }
-            else if (score >= 5) { pillClass = "pill-yellow"; verdict = "Average"; }
+            const s = item.score || 0;
+            let pCls = "pill-red";
+            if (s >= 8) pCls = "pill-green";
+            else if (s >= 5) pCls = "pill-yellow";
 
             row.innerHTML = `
-                <td>${item.question}</td>
-                <td>${item.answer}</td>
-                <td><span class="score-pill ${pillClass}">${score}/10</span></td>
-                <td style="font-weight: 600; color: ${getVerC(pillClass)}">${verdict}</td>
+                <td><div style="font-weight:600; font-size:0.875rem">${item.question}</div></td>
+                <td><div style="font-size:0.875rem; color:var(--text-muted)">${item.answer}</div></td>
+                <td><span class="score-pill ${pCls}">${s}/10</span></td>
             `;
             qaBody.appendChild(row);
         });
-
-        // 5. Suggestions
-        const suggestions = data.suggestions || [];
-        const strengthsList = document.getElementById("strengths-list");
-        const improveList = document.getElementById("improvements-list");
-
-        suggestions.forEach(s => {
-            const li = document.createElement("li");
-            li.innerText = s;
-            if (s.toLowerCase().includes("good") || s.toLowerCase().includes("strength") || s.toLowerCase().includes("well")) {
-                strengthsList.appendChild(li);
-            } else {
-                improveList.appendChild(li);
-            }
-        });
-    }
-
-    function getVerC(cls) {
-        if (cls === 'pill-green') return '#2e7d32';
-        if (cls === 'pill-yellow') return '#ef6c00';
-        return '#c62828';
     }
 
     window.onload = initReport;
