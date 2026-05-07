@@ -4,10 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Mock Interview | ATS.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .container { position: relative; overflow: hidden; }
+        .interview-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            position: relative;
+        }
         
         #start-overlay {
             position: absolute;
@@ -15,32 +20,32 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: var(--card-bg);
+            background: var(--bg-card);
             z-index: 100;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             text-align: center;
-            padding: 2rem;
-            box-sizing: border-box;
+            padding: 3rem;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
         }
 
         #progress-bar-container {
             width: 100%;
-            background: var(--bg-dark);
+            background: var(--bg-input);
             border-radius: 1rem;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
             height: 8px;
             overflow: hidden;
-            border: 1px solid var(--border);
         }
 
         #progress-bar {
             width: 0%;
             height: 100%;
             background: var(--primary);
-            transition: width 0.3s ease;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #video-container {
@@ -51,11 +56,12 @@
         }
 
         video {
-            border-radius: 1rem;
+            border-radius: var(--radius-md);
             border: 2px solid var(--border);
             width: 100%;
-            max-width: 400px;
+            max-width: 480px;
             background: #000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         }
 
         #face-status {
@@ -64,90 +70,109 @@
             left: 50%;
             transform: translateX(-50%);
             background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(4px);
-            padding: 0.5rem 1rem;
+            backdrop-filter: blur(8px);
+            padding: 0.5rem 1.25rem;
             border-radius: 2rem;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             border: 1px solid var(--border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
         #speaking-indicator {
             position: absolute;
-            bottom: 1rem;
-            right: calc(50% - 190px);
-            width: 12px;
-            height: 12px;
-            background: #10b981;
+            bottom: 1.5rem;
+            right: calc(50% - 220px);
+            width: 14px;
+            height: 14px;
+            background: var(--success);
             border-radius: 50%;
             display: none;
-            box-shadow: 0 0 15px #10b981;
+            box-shadow: 0 0 15px var(--success);
         }
 
         @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.5; }
-            50% { transform: scale(1.5); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.5; }
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.6); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.6; }
         }
 
         .speaking { animation: pulse 1s infinite; display: block !important; }
 
-        textarea { margin-top: 1rem; }
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        #question {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+            text-align: center;
+            min-height: 4.5rem;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS.AI</a>
+        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
     </nav>
 
-    <div class="container">
-        <h2 class="title">AI Mock Interview</h2>
-        <p class="subtitle">Focus on the camera and speak clearly</p>
+    <main class="container-full interview-container">
+        <div class="card" style="padding: 3rem;">
+            <!-- Start Interview Overlay -->
+            <div id="start-overlay">
+                <div style="font-size: 3.5rem; margin-bottom: 2rem;">🎙️</div>
+                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem;">AI Interview Ready</h2>
+                <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 2.5rem; font-size: 1.1rem;">Position yourself in front of the camera and ensure your environment is quiet.</p>
+                <button onclick="beginInterview()" class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.1rem;">
+                    🚀 Start Session
+                </button>
+            </div>
 
-        <!-- Start Interview Overlay -->
-        <div id="start-overlay">
-            <div style="font-size: 3rem; margin-bottom: 1.5rem;">🎤</div>
-            <h3 class="title" style="font-size: 1.5rem;">Ready to Begin?</h3>
-            <p class="subtitle" style="max-width: 300px; margin: 0 auto 2rem;">Ensure your microphone and camera are active. We will evaluate your technical depth and confidence.</p>
-            <button onclick="beginInterview()" class="btn-primary" style="width: auto; padding-left: 3rem; padding-right: 3rem;">
-                🚀 Start Session
-            </button>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+
+            <div id="question">
+                Initialising AI interviewer environment...
+            </div>
+
+            <div id="video-container">
+                <video id="video" autoplay muted></video>
+                <div id="face-status">Checking Hardware...</div>
+                <div id="speaking-indicator"></div>
+            </div>
+
+            <textarea id="answer" placeholder="Your response will appear here as you speak..." style="min-height: 120px;"></textarea>
+
+            <div class="btn-group">
+                <button onclick="repeatQuestion()" class="btn btn-ghost">🔊 Repeat</button>
+                <button onclick="toggleListening()" id="mic-btn" class="btn btn-primary" style="background: var(--accent);">🎙 Speak</button>
+                <button onclick="submitAnswer()" id="submit-btn" class="btn btn-primary">Next →</button>
+            </div>
+
+            <div id="score-container" style="display: none; text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+                <button onclick="viewScoreCard()" id="view-score-btn" class="btn btn-primary" style="width: 100%; height: 60px; font-size: 1.1rem;">
+                    📊 Generate Detailed Performance Report
+                </button>
+                <p id="saving-msg" style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">AI is calculating your confidence and technical scores...</p>
+            </div>
         </div>
-
-        <div id="progress-bar-container">
-            <div id="progress-bar"></div>
-        </div>
-
-        <p id="question" style="font-size: 1.125rem; font-weight: 600; min-height: 4em; color: var(--text-main); line-height: 1.5; text-align: center; padding: 0 1rem;">
-            Initialising AI interviewer...
-        </p>
-
-        <div id="video-container">
-            <video id="video" autoplay muted></video>
-            <div id="face-status">Checking Camera...</div>
-            <div id="speaking-indicator"></div>
-        </div>
-
-        <textarea id="answer" placeholder="Click '🎙 Click to Speak' or type your answer directly here..." style="width: 100%; margin-top: 20px; height: 120px; border-radius: 10px; border: 1px solid var(--border); padding: 15px; font-family: inherit; background: var(--bg-dark); color: var(--text-main); line-height: 1.6;"></textarea>
-
-        <div class="button-grid" style="grid-template-columns: 1fr 2fr 1fr;">
-            <button onclick="repeatQuestion()" class="btn-secondary">🔊 Repeat</button>
-            <button onclick="toggleListening()" id="mic-btn" class="btn-primary" style="background: var(--accent);">🎙 Click to Speak</button>
-            <button onclick="submitAnswer()" id="submit-btn" class="btn-primary">Next →</button>
-        </div>
-
-        <div id="score-container" style="display: none; text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-            <button onclick="viewScoreCard()" id="view-score-btn" class="btn-primary" style="width: 100%;">
-                📊 Generate Performance Report
-            </button>
-            <p id="saving-msg" style="margin-top: 1rem; color: var(--text-muted); font-size: 0.875rem;">Generating metrics...</p>
-        </div>
-    </div>
+    </main>
 
     <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+
+    <!-- TensorFlow.js & Object Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <script>
         let questions = [];
@@ -168,10 +193,44 @@
             noFace: 0, 
             multipleFaces: 0, 
             lookingAway: 0,
-            readingDetection: 0 
+            readingDetection: 0,
+            phoneDetected: 0,
+            bookDetected: 0,
+            extraPersons: 0
         };
         let eyeClosed = false;
         let lastGazeX = 0.5;
+        let objectDetector;
+
+        // Load COCO-SSD Model
+        cocoSsd.load().then(model => {
+            objectDetector = model;
+            console.log("Object Detection Model Loaded");
+        });
+
+        function scanForObjects() {
+            if (objectDetector && videoElement.readyState === 4) {
+                objectDetector.detect(videoElement).then(predictions => {
+                    let personCount = 0;
+                    predictions.forEach(pred => {
+                        if (pred.class === "cell phone" && pred.score > 0.6) {
+                            cheatingFlags.phoneDetected++;
+                            document.getElementById("face-status").innerText = "Phone Detected!";
+                            document.getElementById("face-status").style.color = "var(--danger)";
+                        }
+                        if (pred.class === "book" && pred.score > 0.6) {
+                            cheatingFlags.bookDetected++;
+                            document.getElementById("face-status").innerText = "Book Detected!";
+                            document.getElementById("face-status").style.color = "var(--danger)";
+                        }
+                        if (pred.class === "person") personCount++;
+                    });
+                    if (personCount > 1) cheatingFlags.extraPersons++;
+                });
+            }
+            setTimeout(scanForObjects, 2000); // Scan every 2 seconds to maintain performance
+        }
+        scanForObjects();
 
         function loadVoices() { voices = window.speechSynthesis.getVoices(); }
         window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -179,14 +238,14 @@
 
         fetch("/get-all-questions").then(res => res.json()).then(data => {
             questions = data.questions;
-            if (questions.length > 0) document.getElementById("question").innerText = "Camera Ready. Start the session when you are comfortable.";
-            else document.getElementById("question").innerText = "No questions found. Please return to dashboard.";
+            if (questions.length > 0) document.getElementById("question").innerText = "Everything looks good. Click 'Start Session' when ready.";
+            else document.getElementById("question").innerText = "Error: No questions loaded. Please return to dashboard.";
         });
 
         function beginInterview() {
             document.getElementById("start-overlay").style.display = "none";
             if (questions.length > 0) {
-                let firstQ = "Welcome to your AI assessment. Let's start with the first question. " + questions[0];
+                let firstQ = "Hello. Let's begin the interview. " + questions[0];
                 document.getElementById("question").innerText = questions[0];
                 speak(firstQ);
             }
@@ -202,55 +261,41 @@
         faceMesh.onResults(results => {
             const statusEl = document.getElementById("face-status");
             if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-                statusEl.innerText = "❌ No Face Detected"; statusEl.style.color = "#ef4444"; cheatingFlags.noFace++;
+                statusEl.innerText = "No Face Detected"; statusEl.style.color = "var(--danger)"; cheatingFlags.noFace++;
             } else if (results.multiFaceLandmarks.length > 1) {
-                statusEl.innerText = "⚠️ Multiple Faces"; statusEl.style.color = "#f59e0b"; cheatingFlags.multipleFaces++;
+                statusEl.innerText = "Multiple Faces"; statusEl.style.color = "var(--danger)"; cheatingFlags.multipleFaces++;
             } else {
-                statusEl.innerText = "✅ Monitoring Active"; statusEl.style.color = "#10b981";
+                statusEl.innerText = "Assessment Active"; statusEl.style.color = "var(--success)";
                 const landmarks = results.multiFaceLandmarks[0];
                 faceScore.frames++;
 
-                // 1. Posture & Stability
                 const nose = landmarks[1];
                 const dist = Math.sqrt(Math.pow(nose.x - lastFaceCenter.x, 2) + Math.pow(nose.y - lastFaceCenter.y, 2));
                 if (dist < 0.02) faceScore.stability++;
                 lastFaceCenter = nose;
 
-                // 2. Iris Gaze Tracking (Detects Reading)
                 const leftIris = landmarks[468];
                 const rightIris = landmarks[473];
                 const gazeX = (leftIris.x + rightIris.x) / 2;
-                
                 if (Math.abs(gazeX - lastGazeX) > 0.01) {
                     faceScore.gazeCenter++;
-                    if (dist < 0.005 && Math.abs(gazeX - lastGazeX) > 0.02) {
-                        cheatingFlags.readingDetection++;
-                    }
+                    if (dist < 0.005 && Math.abs(gazeX - lastGazeX) > 0.02) cheatingFlags.readingDetection++;
                 }
                 lastGazeX = gazeX;
 
-                // 3. Blink Detection (Simplified EAR)
                 const leftUpperLid = landmarks[159];
                 const leftLowerLid = landmarks[145];
                 const eyeDist = Math.abs(leftUpperLid.y - leftLowerLid.y);
-                
-                if (eyeDist < 0.015 && !eyeClosed) {
-                    eyeClosed = true;
-                    faceScore.blinkCount++;
-                } else if (eyeDist > 0.02) {
-                    eyeClosed = false;
-                }
+                if (eyeDist < 0.015 && !eyeClosed) { eyeClosed = true; faceScore.blinkCount++; }
+                else if (eyeDist > 0.02) { eyeClosed = false; }
 
-                // 4. Mouth Articulation
                 const topLip = landmarks[13];
                 const bottomLip = landmarks[14];
                 faceScore.mouthOpening += Math.abs(topLip.y - bottomLip.y);
 
-                // 5. Smile/Engagement
                 const mouthWidth = Math.abs(landmarks[61].x - landmarks[291].x);
                 if (mouthWidth > 0.15) faceScore.smileScore++;
 
-                // 6. Head Pose (Looking Away)
                 const midEyeX = (landmarks[33].x + landmarks[263].x) / 2;
                 if (Math.abs(nose.x - midEyeX) > 0.06) cheatingFlags.lookingAway++;
             }
@@ -266,7 +311,7 @@
             speech.onstart = () => { indicator.classList.add("speaking"); };
             speech.onend = () => { indicator.classList.remove("speaking"); };
             if (voices.length === 0) voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("David") || v.name.includes("English United States"));
+            const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("David"));
             if (preferredVoice) speech.voice = preferredVoice;
             window.speechSynthesis.speak(speech);
         }
@@ -278,7 +323,7 @@
             const answerEl = document.getElementById("answer");
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.continuous = true; recognition.interimResults = true; recognition.lang = "en-US";
-            recognition.onstart = () => { micBtn.innerText = "🛑 Stop Recording"; micBtn.style.background = "#ef4444"; };
+            recognition.onstart = () => { micBtn.innerText = "🛑 STOP"; micBtn.style.background = "var(--danger)"; };
             recognition.onresult = (event) => {
                 let finalTranscript = "";
                 for (let i = event.resultIndex; i < event.results.length; ++i) if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
@@ -291,7 +336,7 @@
         function stopListening() {
             const micBtn = document.getElementById("mic-btn");
             if (window.currentRecognition) { window.currentRecognition.stop(); window.currentRecognition = null; }
-            micBtn.innerText = "🎙 Click to Speak"; micBtn.style.background = "var(--accent)";
+            micBtn.innerText = "🎙 SPEAK"; micBtn.style.background = "var(--accent)";
         }
 
         function toggleListening() { if (window.currentRecognition) stopListening(); else startListening(); }
@@ -299,34 +344,25 @@
         function submitAnswer() {
             const answer = document.getElementById("answer").value;
             if (!answer) { alert("Please provide an answer first."); return; }
-            
             stopListening();
             allAnswers.push(answer);
-            
             document.getElementById("progress-bar").style.width = ((currentQuestionIndex + 1) / questions.length) * 100 + "%";
             currentQuestionIndex++;
-
-            // REMOVED individual answer evaluation to save API quota
-            
             if (currentQuestionIndex < questions.length) {
                 const nextQ = questions[currentQuestionIndex];
-                const transitions = ["Excellent. ", "Moving on. ", "Next question. ", "I see. "];
-                
                 document.getElementById("question").style.opacity = 0;
                 setTimeout(() => {
                     document.getElementById("question").innerText = nextQ;
                     document.getElementById("question").style.opacity = 1;
-                    speak(transitions[Math.floor(Math.random() * transitions.length)] + nextQ);
+                    speak(nextQ);
                 }, 300);
                 document.getElementById("answer").value = "";
-            } else {
-                finishInterview();
-            }
+            } else { finishInterview(); }
         }
 
         function finishInterview() {
-            document.getElementById("question").innerText = "Assessment Concluded";
-            speak("Thank you. I am processing your performance metrics now.");
+            document.getElementById("question").innerText = "Interview Complete";
+            speak("Thank you for your time. Your report is being generated.");
             document.getElementById("submit-btn").style.display = "none";
             document.getElementById("mic-btn").style.display = "none";
             document.getElementById("score-container").style.display = "block";
@@ -340,7 +376,6 @@
                 document.getElementById("saving-msg").innerText = "Analysis Complete!";
             });
         }
-
         function viewScoreCard() { window.location.href = "/final-report"; }
     </script>
 </body>

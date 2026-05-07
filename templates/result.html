@@ -3,61 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Analysis Result | ATS.AI</title>
+    <title>Analysis Report | ATS.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS.AI</a>
+        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">← Dashboard</a>
+        </div>
     </nav>
 
-    <div class="report-container">
+    <main class="container-full" style="max-width: 1000px; padding-top: 3rem; padding-bottom: 5rem;">
+        
+        <header class="report-header card">
+            <div class="header-main">
+                <div class="score-container">
+                    <div class="circular-progress">
+                        <svg>
+                            <circle class="bg" cx="60" cy="60" r="54"></circle>
+                            <circle class="fg" cx="60" cy="60" r="54" style="stroke-dashoffset: calc(339 - (339 * {{ score }}) / 100);"></circle>
+                        </svg>
+                        <div class="percentage">{{ score }}<span>%</span></div>
+                    </div>
+                    <div class="score-info">
+                        <h2>Analysis Result</h2>
+                        <p>Match score based on AI validation</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button onclick="window.print()" class="btn btn-ghost">🖨️ Print</button>
+                </div>
+            </div>
+        </header>
 
-        <div class="header-section">
-            <h2>Analysis Report</h2>
-            <p>Artificial Intelligence Resume Validation</p>
+        <div class="results-grid">
+            <!-- Technical Skills -->
+            <section class="card skill-card">
+                <h3 class="card-title">🛠️ Technical Skills</h3>
+                <div class="skill-chips">
+                    {% for skill in matched_tech %}
+                        <span class="chip chip-success">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Soft Skills -->
+            <section class="card skill-card">
+                <h3 class="card-title">🤝 Soft Skills</h3>
+                <div class="skill-chips">
+                    {% for skill in matched_soft %}
+                        <span class="chip chip-accent">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Missing Skills -->
+            <section class="card full-width">
+                <h3 class="card-title title-danger">❌ Missing Keywords</h3>
+                <div class="skill-chips">
+                    {% for skill in missing %}
+                        <span class="chip chip-danger">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+                {% if not missing %}
+                    <p class="empty-msg">No critical missing keywords found!</p>
+                {% endif %}
+            </section>
+
+            <!-- Suggestions -->
+            <section class="card full-width">
+                <h3 class="card-title">💡 Strategic Advice</h3>
+                <ul class="advice-list">
+                    {% for tip in suggestions %}
+                        <li>{{ tip|safe }}</li>
+                    {% endfor %}
+                </ul>
+            </section>
         </div>
 
-        <div class="score-box">
-            <div class="score">{{ score }}%</div>
-            <div class="score-label">Match Probability Score</div>
-        </div>
+        <footer class="report-footer">
+            <form action="/optimize-resume" method="POST">
+                <input type="hidden" name="resume_text" value="{{ resume_text }}">
+                <input type="hidden" name="job_desc" value="{{ job_desc }}">
+                <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--accent);">✨ Smart Resume Rewrites</button>
+            </form>
 
-        <div class="section section-matched">
-            <h3>✅ Matched Skills</h3>
-            <ul>
-                {% for skill in matched %}
-                    <li>{{ skill }}</li>
-                {% endfor %}
-            </ul>
-        </div>
+            <form action="/generate-questions" method="POST">
+                <input type="hidden" name="resume_text" value="{{ resume_text }}">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">🧠 Generate Interview Questions</button>
+            </form>
+        </footer>
 
-        <div class="section section-missing">
-            <h3>❌ Missing Skills</h3>
-            <ul>
-                {% for skill in missing %}
-                    <li>{{ skill }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="section section-suggestions">
-            <h3>💡 AI Suggestions</h3>
-            <ul>
-                {% for tip in suggestions %}
-                    <li>{{ tip }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="actions">
-            <button onclick="window.print()" class="btn">Download Report PDF</button>
-            <a href="/dashboard" class="back-link">← Analyze Another Resume</a>
-        </div>
-
-    </div>
+    </main>
 
 </body>
 </html>

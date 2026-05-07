@@ -3,31 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Score Card | ATS.AI</title>
+    <title>Interview Performance | ATS.AI</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .report-container {
-            max-width: 1000px;
-            margin: 3rem auto;
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 1.5rem;
-            padding: 3rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        .hero-section {
+        .report-header-section {
             display: grid;
-            grid-template-columns: 1fr 2fr;
+            grid-template-columns: 240px 1fr;
             gap: 3rem;
             align-items: center;
-            margin-bottom: 4rem;
-            padding: 2rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 1.5rem;
+            margin-bottom: 3rem;
+            padding: 2.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-lg);
             border: 1px solid var(--border);
+        }
+
+        @media (max-width: 768px) {
+            .report-header-section {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
         }
 
         .score-gauge-container {
@@ -49,157 +47,151 @@
 
         .verdict-badge {
             display: inline-block;
-            padding: 0.5rem 1.5rem;
+            padding: 0.6rem 1.75rem;
             border-radius: 2rem;
             font-weight: 700;
-            font-size: 1rem;
-            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
             text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .badge-high { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .badge-high { background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
         .badge-mid { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
-        .badge-low { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .badge-low { background: rgba(244, 63, 94, 0.1); color: var(--danger); border: 1px solid rgba(244, 63, 94, 0.2); }
 
-        .quick-stats {
+        .metric-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 1.5rem;
         }
 
-        .stat-card {
-            background: var(--bg-dark);
+        .metric-card {
+            background: var(--bg-main);
             padding: 1.5rem;
-            border-radius: 1rem;
+            border-radius: var(--radius-md);
             text-align: center;
             border: 1px solid var(--border);
         }
 
-        .stat-card .label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600; }
-        .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .metric-label { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+        .metric-value { font-size: 1.75rem; font-weight: 800; color: var(--primary); }
 
-        .card {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 2rem;
-            border-radius: 1.5rem;
-            border: 1px solid var(--border);
-            margin-bottom: 2rem;
+        .analysis-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 2.5rem;
+        }
+
+        @media (max-width: 600px) {
+            .analysis-grid { grid-template-columns: 1fr; }
         }
 
         .qa-table {
             width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 0.75rem;
+            border-collapse: collapse;
         }
 
         .qa-table th {
             text-align: left;
-            padding: 1rem;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            font-weight: 600;
-        }
-
-        .qa-table td {
             padding: 1.25rem 1rem;
-            background: rgba(255, 255, 255, 0.03);
-            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
             border-bottom: 1px solid var(--border);
         }
 
-        .qa-table td:first-child { border-left: 1px solid var(--border); border-top-left-radius: 1rem; border-bottom-left-radius: 1rem; }
-        .qa-table td:last-child { border-right: 1px solid var(--border); border-top-right-radius: 1rem; border-bottom-right-radius: 1rem; }
+        .qa-table td {
+            padding: 1.5rem 1rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
 
         .score-pill {
-            padding: 0.25rem 0.75rem;
-            border-radius: 1rem;
+            padding: 0.4rem 1rem;
+            border-radius: 2rem;
             font-size: 0.8125rem;
             font-weight: 700;
+            background: var(--bg-input);
         }
 
-        .pill-green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-        .pill-yellow { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        .pill-red { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-
-        .btn-back {
-            display: block;
-            width: fit-content;
-            margin: 3rem auto 0;
-            padding: 1rem 2rem;
-            background: var(--primary);
-            color: white;
-            text-decoration: none;
-            border-radius: 0.75rem;
-            font-weight: 700;
-            transition: all 0.2s;
-        }
-
-        .btn-back:hover { background: var(--primary-hover); transform: translateY(-2px); }
+        .pill-green { color: var(--success); background: rgba(16, 185, 129, 0.1); }
+        .pill-yellow { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+        .pill-red { color: var(--danger); background: rgba(244, 63, 94, 0.1); }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS.AI</a>
+        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
     </nav>
 
-    <div class="report-container">
-        <div class="header" style="text-align: center; margin-bottom: 3rem;">
-            <h1 class="title">Interview Performance</h1>
-            <p class="subtitle">AI-generated comprehensive assessment</p>
-        </div>
+    <main class="container-full" style="max-width: 1100px; padding-top: 3rem; padding-bottom: 5rem;">
+        <header style="text-align: center; margin-bottom: 3.5rem;">
+            <h1 style="font-size: 2.75rem; font-weight: 800; margin-bottom: 0.5rem;">Interview Performance</h1>
+            <p style="color: var(--text-muted); font-size: 1.1rem;">Comprehensive analysis of your professional engagement and expertise.</p>
+        </header>
 
-        <div class="hero-section">
+        <section class="report-header-section">
             <div class="score-gauge-container">
                 <canvas id="scoreChart"></canvas>
                 <div class="score-value" id="overallScore">0/10</div>
             </div>
-            <div style="text-align: center;">
-                <div id="verdictBadge" class="verdict-badge">Analyzing...</div>
-                <div class="quick-stats">
-                    <div class="stat-card">
-                        <div class="label">Technical</div>
-                        <div class="value" id="techScore">0</div>
+            <div>
+                <div style="text-align: center;">
+                    <div id="verdictBadge" class="verdict-badge">Assessment Data Incoming...</div>
+                </div>
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Technical</div>
+                        <div class="metric-value" id="techScore">0</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="label">Communication</div>
-                        <div class="value" id="commScore">0</div>
+                    <div class="metric-card">
+                        <div class="metric-label">Communication</div>
+                        <div class="metric-value" id="commScore">0</div>
                     </div>
-                    <div class="stat-card">
-                        <div class="label">Confidence</div>
-                        <div class="value" id="confScore">0</div>
+                    <div class="metric-card">
+                        <div class="metric-label">Confidence</div>
+                        <div class="metric-value" id="confScore">0</div>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div class="analysis-grid">
             <div class="card">
-                <h3 style="margin-top: 0; font-size: 1.125rem;">🧠 Behavioral Analysis</h3>
-                <p id="behavioralText" style="color: var(--text-muted); line-height: 1.6; font-size: 0.9375rem;">Loading...</p>
+                <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">🧠 Behavioral Observations</h3>
+                <p id="behavioralText" style="color: var(--text-muted); line-height: 1.7; font-size: 0.95rem;">Loading analytical insights...</p>
             </div>
             <div class="card">
-                <h3 style="margin-top: 0; font-size: 1.125rem;">🛡️ Integrity Check</h3>
-                <p id="integrityText" style="color: var(--text-muted); line-height: 1.6; font-size: 0.9375rem;">Loading...</p>
+                <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">🛡️ Integrity & Focus</h3>
+                <p id="integrityText" style="color: var(--text-muted); line-height: 1.7; font-size: 0.95rem;">Scanning biometric markers...</p>
             </div>
         </div>
 
-        <div class="card" style="background: none; border: none; padding: 0;">
-            <h3 style="font-size: 1.125rem;">📝 Question Breakdown</h3>
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);">
+                <h3 style="font-size: 1.1rem;">📝 Detailed Question Breakdown</h3>
+            </div>
             <table class="qa-table">
                 <thead>
                     <tr>
-                        <th style="width: 35%;">Question</th>
-                        <th style="width: 45%;">Response</th>
-                        <th style="width: 20%;">Score</th>
+                        <th style="width: 35%; padding-left: 2rem;">Interview Question</th>
+                        <th style="width: 50%;">Your Response</th>
+                        <th style="width: 15%; padding-right: 2rem; text-align: center;">Score</th>
                     </tr>
                 </thead>
                 <tbody id="qa-body"></tbody>
             </table>
         </div>
 
-        <a href="/dashboard" class="btn-back">← Return to Dashboard</a>
-    </div>
+        <div style="margin-top: 4rem; text-align: center; display: flex; gap: 1rem; justify-content: center;">
+            <a href="/dashboard" class="btn btn-ghost" style="padding: 1rem 3rem;">Return to Dashboard</a>
+            <a href="/download-report" class="btn btn-primary" style="padding: 1rem 3rem; background: var(--success);">📥 Download PDF Report</a>
+        </div>
+    </main>
 
 <script id="result-data" type="application/json">
     {{ result | tojson | safe }}
@@ -235,22 +227,24 @@
             data: {
                 datasets: [{
                     data: [overall, 10 - overall],
-                    backgroundColor: ['#4f46e5', '#334155'],
-                    borderWidth: 0
+                    backgroundColor: ['#6366f1', '#334155'],
+                    borderWidth: 0,
+                    hoverOffset: 0
                 }]
             },
             options: {
-                cutout: '80%',
+                cutout: '82%',
                 plugins: { tooltip: { enabled: false }, legend: { display: false } }
             }
         });
 
-        document.getElementById("behavioralText").innerText = data.behavioral_analysis?.observations || "Analysis pending.";
-        
+        document.getElementById("behavioralText").innerText = data.behavioral_analysis?.observations || "No specific behavioral observations recorded.";
+
         const risk = data.behavioral_analysis?.cheating_risk || "Low";
+        const riskColor = risk === "High" ? "var(--danger)" : "var(--success)";
         document.getElementById("integrityText").innerHTML = `
-            <strong>Risk:</strong> ${risk}<br>
-            Candidate demonstrated focus and consistent camera engagement.
+            <div style="margin-bottom: 0.5rem;"><strong style="color: var(--text-main);">Risk Assessment:</strong> <span style="color: ${riskColor}; font-weight: 800;">${risk.toUpperCase()}</span></div>
+            <p>${risk === "High" ? "🚨 Unauthorized activity detected. Review observations for details regarding object or script usage." : "Biometric and object monitoring indicates a clean session with no unauthorized devices or people detected."}</p>
         `;
 
         const qaBody = document.getElementById("qa-body");
@@ -262,9 +256,15 @@
             else if (s >= 5) pCls = "pill-yellow";
 
             row.innerHTML = `
-                <td><div style="font-weight:600; font-size:0.875rem">${item.question}</div></td>
-                <td><div style="font-size:0.875rem; color:var(--text-muted)">${item.answer}</div></td>
-                <td><span class="score-pill ${pCls}">${s}/10</span></td>
+                <td style="padding-left: 2rem;">
+                    <div style="font-weight:600; font-size:0.9rem">${item.question}</div>
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(99, 102, 241, 0.05); border-left: 3px solid var(--primary); border-radius: 4px;">
+                        <div style="font-size: 0.7rem; font-weight: 800; color: var(--primary); text-transform: uppercase; margin-bottom: 0.25rem;">Expert Sample Answer</div>
+                        <div style="font-size: 0.85rem; color: var(--text-main); line-height: 1.5;">${item.expert_answer || 'No sample available.'}</div>
+                    </div>
+                </td>
+                <td><div style="font-size:0.9rem; color:var(--text-muted); line-height: 1.6;">${item.answer}</div></td>
+                <td style="padding-right: 2rem; text-align: center;"><span class="score-pill ${pCls}">${s}/10</span></td>
             `;
             qaBody.appendChild(row);
         });

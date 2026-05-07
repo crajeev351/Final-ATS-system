@@ -3,45 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ATS Intelligence Dashboard</title>
+    <title>Dashboard | ATS.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
+    <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(12px);">
+        <div class="spinner"></div>
+        <p class="loading-text">AI is analyzing your resume...</p>
+        <p class="loading-subtext">This may take a few seconds</p>
+    </div>
+
     <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS.AI</a>
-        <div class="nav-user">
-            <span style="color: var(--text-muted)">Welcome, <b>{{ session['user'] }}</b></span>
+        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
+        <div class="nav-links">
+            <span class="nav-user">Welcome, <b>{{ session['user'] }}</b></span>
             <a href="/logout" class="logout-btn">Logout</a>
         </div>
     </nav>
 
-    <div class="container">
-        <h1 class="title">Intelligence Dashboard</h1>
-        <p class="subtitle">Analyze resumes and generate interview questions with AI</p>
+    <main class="dashboard-grid container-full">
+        <!-- Left Column: Input -->
+        <section class="main-content">
+            <header class="page-header">
+                <h1 class="title">Intelligence Dashboard</h1>
+                <p class="subtitle">Analyze resumes and generate interview questions with precision.</p>
+            </header>
 
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="job_desc">Job Description</label>
-                <textarea id="job_desc" name="job_desc" placeholder="Paste the full job description here to compare with the resume..." required></textarea>
+            <div class="card">
+                <form id="analysis-form" method="POST" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="job_desc">Job Description</label>
+                            <span id="char-count" class="badge">0 chars</span>
+                        </div>
+                        <textarea id="job_desc" name="job_desc" placeholder="Paste the job description here..." required oninput="document.getElementById('char-count').innerText = this.value.length + ' chars'"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Resume Document</label>
+                        <div id="drop-zone" class="drop-zone">
+                            <div class="drop-icon">📁</div>
+                            <div class="drop-text">
+                                <p id="file-name">Click or drag & drop PDF/DOCX</p>
+                                <span>Max file size: 10MB</span>
+                            </div>
+                            <input type="file" id="resume" name="resume" accept=".pdf,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required style="display: none;">
+                        </div>
+                    </div>
+
+                    <div class="action-grid">
+                        <button type="submit" onclick="showLoading()" class="btn btn-primary">
+                            ⚡ Run ATS Analysis
+                        </button>
+                        <button formaction="/generate-questions" onclick="showLoading()" formmethod="post" class="btn btn-ghost">
+                            🧠 Generate Questions
+                        </button>
+                    </div>
+                </form>
             </div>
+        </section>
 
-            <div class="form-group">
-                <label for="resume">Upload Resume (PDF)</label>
-                <input type="file" id="resume" name="resume" accept=".pdf" required>
+        <!-- Right Column: History -->
+        <aside class="sidebar">
+            <h2 class="section-title">Resume Analysis</h2>
+            {% if history %}
+            <div class="history-list">
+                {% for item in history %}
+                <div class="history-card">
+                    <div class="history-info">
+                        <div class="history-score">{{ item.score }}%</div>
+                        <div class="history-meta">
+                            <span class="history-date">{{ item.created_at.strftime('%b %d, %H:%M') }}</span>
+                        </div>
+                    </div>
+                    <div class="history-actions">
+                        <a href="/view-analysis/{{ item.id }}" class="history-btn view" title="View Report">👁️</a>
+                        <a href="/delete-analysis/{{ item.id }}" class="history-btn delete" title="Delete">🗑️</a>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-
-            <div class="button-grid">
-                <button type="submit" class="btn-primary">
-                    ⚡ ATS Score Analysis
-                </button>
-                <button formaction="/generate-questions" formmethod="post" class="btn-secondary">
-                    🧠 Generate Interview Questions
-                </button>
+            {% else %}
+            <div class="empty-state">
+                <p>No resume history found.</p>
             </div>
-        </form>
-    </div>
+            {% endif %}
 
+            <h2 class="section-title" style="margin-top: 3rem;">Interview History</h2>
+            {% if interview_history %}
+            <div class="history-list">
+                {% for item in interview_history %}
+                <div class="history-card">
+                    <div class="history-info">
+                        <div class="history-score" style="background: var(--accent);">{{ item.score }}/10</div>
+                        <div class="history-meta">
+                            <span class="history-date" style="font-weight: 700; color: var(--text-main);">{{ item.verdict }}</span>
+                            <span class="history-date">{{ item.date.strftime('%b %d') }}</span>
+                        </div>
+                    </div>
+                    <div class="history-actions">
+                        <a href="/view-interview/{{ item.id }}" class="history-btn view" title="View Report">👁️</a>
+                        <a href="/delete-interview/{{ item.id }}" class="history-btn delete" title="Delete">🗑️</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <p>No interview history found.</p>
+            </div>
+            {% endif %}
+        </aside>
+    </main>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('resume');
+        const fileName = document.getElementById('file-name');
+
+        dropZone.onclick = () => fileInput.click();
+
+        dropZone.ondragover = (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        };
+
+        dropZone.ondragleave = () => {
+            dropZone.classList.remove('active');
+        };
+
+        dropZone.ondrop = (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            fileInput.files = e.dataTransfer.files;
+            updateFileName();
+        };
+
+        fileInput.onchange = () => updateFileName();
+
+        function updateFileName() {
+            if (fileInput.files.length > 0) {
+                fileName.innerText = fileInput.files[0].name;
+                dropZone.classList.add('has-file');
+            }
+        }
+
+        function showLoading() {
+            const form = document.getElementById('analysis-form');
+            if (form.checkValidity()) {
+                document.getElementById('loading-overlay').style.display = 'flex';
+            }
+        }
+    </script>
 </body>
 </html>

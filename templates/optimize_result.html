@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Optimization | ATS.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .suggestion-card {
+            margin-bottom: 2rem;
+            transition: transform 0.2s;
+        }
+        .suggestion-card:hover {
+            transform: translateY(-4px);
+        }
+        .suggestion-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .suggestion-num {
+            background: var(--primary);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+        }
+        .suggestion-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        .rewrite-grid {
+            display: grid;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+        .box-label {
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        .original-box, .improved-box {
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .original-box {
+            background: rgba(244, 63, 94, 0.05);
+            border: 1px solid rgba(244, 63, 94, 0.1);
+            color: #fca5a5;
+            text-decoration: line-through;
+        }
+        .improved-box {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            color: #6ee7b7;
+            font-weight: 500;
+        }
+        .reason-box {
+            display: flex;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-input);
+            border-radius: var(--radius-md);
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+        }
+        .reason-icon { font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
+        <div class="nav-links">
+            <a href="/dashboard" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">← Dashboard</a>
+        </div>
+    </nav>
+
+    <main class="container-full" style="max-width: 850px; padding-top: 3rem; padding-bottom: 5rem;">
+        <header style="margin-bottom: 3rem; text-align: center;">
+            <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">AI Smart Rewrites</h1>
+            <p style="color: var(--text-muted);">Specific, high-impact improvements for your resume lines.</p>
+        </header>
+
+        <div class="suggestions-container">
+            {% for sug in suggestions %}
+            <div class="card suggestion-card">
+                <div class="suggestion-header">
+                    <div class="suggestion-num">{{ loop.index }}</div>
+                    <div class="suggestion-title">Optimization Suggestion</div>
+                </div>
+
+                <div class="rewrite-grid">
+                    <div>
+                        <span class="box-label">Original Sentence</span>
+                        <div class="original-box">{{ sug.original }}</div>
+                    </div>
+                    <div>
+                        <span class="box-label">Improved Version</span>
+                        <div class="improved-box">{{ sug.improved }}</div>
+                    </div>
+                </div>
+
+                <div class="reason-box">
+                    <span class="reason-icon">💡</span>
+                    <div>
+                        <span class="box-label" style="margin-bottom: 0.25rem; color: var(--accent);">Why this works</span>
+                        <p style="color: var(--text-main);">{{ sug.reason }}</p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div style="margin-top: 4rem; text-align: center;">
+            <a href="/dashboard" class="btn btn-primary">Return to Dashboard</a>
+            <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 1.5rem;">Tip: Use these lines to replace weaker bullet points in your resume.</p>
+        </div>
+    </main>
+
+</body>
+</html>
+

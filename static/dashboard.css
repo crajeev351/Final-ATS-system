@@ -1,178 +1,264 @@
-:root {
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --bg-dark: #0f172a;
-    --card-bg: #1e293b;
-    --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --border: #334155;
-    --accent: #06b6d4;
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr;
+    gap: 2.5rem;
+    padding-top: 3rem;
+    padding-bottom: 5rem;
 }
 
-body {
-    margin: 0;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--bg-dark);
-    background-image: radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
-                      radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.15) 0px, transparent 50%);
-    color: var(--text-main);
-    min-height: 100vh;
+@media (max-width: 968px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-}
-
-.logo {
-    font-size: 1.5rem;
-    font-weight: 800;
-    background: linear-gradient(to right, var(--accent), var(--primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    text-decoration: none;
-}
-
-.nav-user {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-}
-
-.container {
-    max-width: 800px;
-    margin: 3rem auto;
-    padding: 2.5rem;
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 1.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-.title {
-    font-size: 2.25rem;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-    text-align: center;
-    color: var(--text-main);
-}
-
-.subtitle {
-    text-align: center;
-    color: var(--text-muted);
+.page-header {
     margin-bottom: 2.5rem;
 }
 
-.logout-btn {
-    padding: 0.5rem 1.25rem;
-    border-radius: 0.5rem;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: #ef4444;
-    text-decoration: none;
-    transition: all 0.2s;
-    border: 1px solid transparent;
+.title {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin-bottom: 0.5rem;
 }
 
-.logout-btn:hover {
-    background: rgba(239, 68, 68, 0.1);
-    border-color: rgba(239, 68, 68, 0.2);
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1.1rem;
 }
 
+/* Form Styles */
 .form-group {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.label-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
 }
 
 label {
-    display: block;
     font-weight: 600;
-    margin-bottom: 0.5rem;
     font-size: 0.875rem;
     color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
-textarea, input[type="file"] {
+.badge {
+    background: var(--bg-input);
+    color: var(--text-muted);
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+textarea {
     width: 100%;
-    box-sizing: border-box;
-    padding: 0.75rem 1rem;
-    border-radius: 0.75rem;
+    min-height: 220px;
+    background: var(--bg-input);
     border: 1px solid var(--border);
-    background: #0f172a;
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
     color: var(--text-main);
     font-family: inherit;
     font-size: 1rem;
+    line-height: 1.6;
+    resize: vertical;
     transition: all 0.2s;
 }
 
 textarea:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
 }
 
-textarea {
-    min-height: 180px;
-    resize: vertical;
+/* Drop Zone */
+.drop-zone {
+    border: 2px dashed var(--bg-input);
+    border-radius: var(--radius-md);
+    padding: 3rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(255, 255, 255, 0.01);
 }
 
-.button-grid {
+.drop-zone:hover, .drop-zone.active {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+.drop-zone.has-file {
+    border-style: solid;
+    border-color: var(--success);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.drop-icon {
+    font-size: 2.5rem;
+    opacity: 0.5;
+    transition: all 0.3s;
+}
+
+.drop-zone:hover .drop-icon {
+    transform: translateY(-5px);
+    opacity: 1;
+}
+
+.drop-text {
+    text-align: center;
+}
+
+.drop-text p {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.drop-text span {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.action-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: 1.25rem;
+    margin-top: 1rem;
 }
 
-button {
-    padding: 0.875rem 1.5rem;
-    border-radius: 0.75rem;
+/* Sidebar & History */
+.section-title {
+    font-size: 1.25rem;
     font-weight: 700;
-    font-size: 1rem;
-    cursor: pointer;
+    margin-bottom: 1.5rem;
+    color: var(--text-main);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.history-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     transition: all 0.2s;
+}
+
+.history-card:hover {
+    border-color: var(--text-muted);
+    transform: translateX(5px);
+}
+
+.history-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.history-score {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary);
+    width: 60px;
+}
+
+.history-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.history-date {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.history-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.history-btn {
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
-    border: none;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    background: var(--bg-input);
 }
 
-.btn-primary {
-    background: var(--primary);
+.history-btn.view:hover {
+    background: var(--accent);
     color: white;
 }
 
-.btn-primary:hover {
-    background: var(--primary-hover);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4);
-}
-
-.btn-secondary {
-    background: #334155;
+.history-btn.delete:hover {
+    background: var(--danger);
     color: white;
 }
 
-.btn-secondary:hover {
-    background: #475569;
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-lg);
+    border: 1px dashed var(--border);
 }
 
-input[type="file"]::file-selector-button {
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    margin-right: 1rem;
-    cursor: pointer;
-    font-weight: 600;
+.empty-state p {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.empty-state span {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+/* Loading Overlay Styles */
+.spinner {
+    width: 64px;
+    height: 64px;
+    border: 6px solid var(--bg-input);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-text {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+}
+
+.loading-subtext {
+    color: var(--text-muted);
+    font-weight: 500;
 }

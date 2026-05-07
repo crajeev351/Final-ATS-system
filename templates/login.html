@@ -4,30 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | ATS.AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
 
-<div class="container">
-    <a href="/" class="logo">ATS.AI</a>
-    <h2 class="title">Welcome Back</h2>
-    <p class="subtitle">Please enter your details to sign in</p>
+<div class="auth-card card">
+    <header class="auth-header">
+        <a href="/" class="logo">ATS<span>.AI</span></a>
+        <h2>Welcome Back</h2>
+        <p>Please enter your details to sign in</p>
+    </header>
 
     {% if message %}
         <div class="message">{{ message }}</div>
     {% endif %}
 
-    <form method="POST">
-        <input type="text" name="username" placeholder="Username" required autocomplete="username">
-        <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+    <form method="POST" class="auth-form">
+        <div class="form-field">
+            <input type="text" name="username" placeholder="Username" required autocomplete="username">
+        </div>
+        <div class="form-field">
+            <input type="password" name="password" placeholder="Password" required autocomplete="current-password">
+        </div>
 
-        <button type="submit">Sign In</button>
+        <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Sign In</button>
     </form>
 
-    <p class="footer-text">
+    <footer class="auth-footer">
         Don't have an account? <a href="/">Create one for free</a>
-    </p>
+    </footer>
 </div>
 
 </body>

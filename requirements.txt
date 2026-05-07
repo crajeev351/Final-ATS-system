@@ -1,5 +1,6 @@
 Flask
-PyMySQL
 python-dotenv
 pdfminer.six
-google-generativeai
+openai
+python-docx
+fpdf
