@@ -187,9 +187,16 @@
             </table>
         </div>
 
-        <div style="margin-top: 4rem; text-align: center; display: flex; gap: 1rem; justify-content: center;">
-            <a href="/dashboard" class="btn btn-ghost" style="padding: 1rem 3rem;">Return to Dashboard</a>
-            <a href="/download-report" class="btn btn-primary" style="padding: 1rem 3rem; background: var(--success);">📥 Download PDF Report</a>
+        <div style="margin-top: 4rem; text-align: center;">
+            <div style="margin-bottom: 2rem; display: flex; justify-content: center; gap: 0.5rem; align-items: center;">
+                <input type="email" id="user-email" placeholder="Enter your email" style="padding: 0.75rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main); width: 300px;">
+                <button onclick="sendEmail()" id="email-btn" class="btn btn-ghost" style="border: 1px solid var(--primary); color: var(--primary);">📧 Send to Email</button>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <a href="/dashboard" class="btn btn-ghost" style="padding: 1rem 3rem;">Return to Dashboard</a>
+                <a href="/download-report" class="btn btn-primary" style="padding: 1rem 3rem; background: var(--success);">📥 Download PDF Report</a>
+            </div>
         </div>
     </main>
 
@@ -268,6 +275,23 @@
             `;
             qaBody.appendChild(row);
         });
+    }
+
+    window.onload = initReport;
+</script>
+
+</body>
+</html> === "ok") {
+                alert("✅ Report sent successfully!");
+                btn.innerText = "📧 Sent!";
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (err) {
+            alert("❌ Failed to send email: " + err.message);
+            btn.disabled = false;
+            btn.innerText = "📧 Retry Send";
+        }
     }
 
     window.onload = initReport;

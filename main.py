@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import os
 import json
@@ -138,9 +139,10 @@ def signup():
         if user:
             message = "User already exists!"
         else:
+            hashed_pw = generate_password_hash(password)
             cursor.execute(
                 "INSERT INTO users (username, password) VALUES (?, ?)",
-                (username, password)
+                (username, hashed_pw)
             )
             conn.commit()
             conn.close()
@@ -163,14 +165,14 @@ def login():
         cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM users WHERE username=? AND password=?",
-            (username, password)
+            "SELECT * FROM users WHERE username=?",
+            (username,)
         )
 
         user = cursor.fetchone()
         conn.close()
 
-        if user:
+        if user and check_password_hash(user['password'], password):
             session["user"] = username
             return redirect(url_for("dashboard"))
         else:
@@ -194,7 +196,8 @@ def dashboard():
             file = request.files.get('resume')
 
             if not file or file.filename == "":
-                return "Please upload a resume"
+                flash("Please upload a resume")
+                return redirect(url_for('dashboard'))
 
             filepath = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
             file.save(filepath)
@@ -207,31 +210,20 @@ You are an expert Technical Recruiter and ATS Optimization Specialist.
 Analyze the provided Resume against the Job Description.
 
 CRITICAL PRECISION RULES:
-1. TECHNICAL SKILLS MATCHED: List ONLY technical skills (languages, frameworks, tools) that are EXPLICITLY mentioned in the Resume AND relevant to the Job Description. Use 1-3 words per item.
+1. TECHNICAL SKILLS MATCHED: List ONLY technical skills (languages, frameworks, tools) that are EXPLICITLY mentioned in the Resume AND relevant to the Job Description.
 2. SOFT SKILLS MATCHED: List ONLY professional traits EXPLICITLY found in the Resume.
 3. MISSING SKILLS: List critical technical requirements from the Job Description that are NOT in the Resume.
-4. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Start each suggestion with a bold category/title (using **Title:**). Provide actual examples based on the resume.
-5. NO HALLUCINATIONS: Do not assume the candidate has a skill unless it is written. Do not include advice or "consider adding" sentences in the Skills sections.
+4. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Provide actual examples based on the resume.
+5. NO HALLUCINATIONS: Do not assume the candidate has a skill unless it is written.
 
-Format strictly as:
-
-Match Percentage: <number>
-
-Technical Skills Matched:
-- skill
-- skill
-
-Soft Skills Matched:
-- skill
-- skill
-
-Missing Skills:
-- skill
-- skill
-
-Strategic Advice:
-- **Title**: Specific actionable advice here.
-- **Title**: Specific actionable advice here.
+Format strictly as JSON:
+{{
+  "match_percentage": <number>,
+  "technical_skills_matched": ["skill", "skill"],
+  "soft_skills_matched": ["skill", "skill"],
+  "missing_skills": ["skill", "skill"],
+  "strategic_advice": ["suggestion 1", "suggestion 2"]
+}}
 
 Resume Content:
 {resume_text}
@@ -242,69 +234,30 @@ Job Description:
 
             result = get_ai_completion(prompt)
 
-            score = 0
-            matched_tech = []
-            matched_soft = []
-            missing = []
-            suggestions = []
+            try:
+                # Robust JSON extraction
+                import re
+                match = re.search(r'\{.*\}', result, re.DOTALL)
+                if match:
+                    result = match.group(0)
+                
+                data = json.loads(result)
+                score = data.get("match_percentage", 0)
+                matched_tech = data.get("technical_skills_matched", [])
+                matched_soft = data.get("soft_skills_matched", [])
+                missing = data.get("missing_skills", [])
+                suggestions = data.get("strategic_advice", [])
+                
+                # Format suggestions (Bold to strong)
+                suggestions = [re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', str(sug)) for sug in suggestions]
 
-            import re
-            lines = result.split("\n")
-            current_section = None
-
-            for line in lines:
-                line_clean = line.strip()
-                if not line_clean: continue
-                line_lower = line_clean.lower()
-
-                # Section detection
-                if "match percentage" in line_lower:
-                    try:
-                        nums = re.findall(r'\d+', line_clean)
-                        score = int(nums[0]) if nums else 0
-                    except:
-                        score = 0
-                    continue
-                elif "technical skills" in line_lower:
-                    current_section = "tech"
-                    continue
-                elif "soft skills" in line_lower:
-                    current_section = "soft"
-                    continue
-                elif "missing skills" in line_lower:
-                    current_section = "missing"
-                    continue
-                elif "strategic advice" in line_lower or "suggestions" in line_lower:
-                    current_section = "suggestions"
-                    continue
-
-                # Item extraction (handles -, *, 1., 1) etc.)
-                if re.match(r'^[\-\*\d\.]', line_clean):
-                    item = re.sub(r'^[\-\*\d\.\s]+', '', line_clean).strip()
-                    if not item: continue
-                    
-                    # Precision check for skills sections only
-                    if current_section in ["tech", "soft", "missing"]:
-                        # If it's a long sentence or sounds like advice, don't put it in keywords
-                        if len(item.split()) > 6 or "consider" in item.lower() or "should" in item.lower():
-                            # If we are in a skill section but it sounds like advice, move it to advice
-                            suggestions.append(item)
-                            continue
-
-                    if current_section == "tech":
-                        matched_tech.append(item)
-                    elif current_section == "soft":
-                        matched_soft.append(item)
-                    elif current_section == "missing":
-                        missing.append(item)
-                    elif current_section == "suggestions":
-                        # Convert **Bold** to <strong>Bold</strong>
-                        formatted_item = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', item)
-                        suggestions.append(formatted_item)
-                elif current_section == "suggestions":
-                    # For suggestions, even if there's no bullet, take the line
-                    formatted_line = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', line_clean)
-                    suggestions.append(formatted_line)
+            except Exception as parse_err:
+                print(f"JSON Parsing Error: {parse_err}")
+                score = 0
+                matched_tech = []
+                matched_soft = []
+                missing = []
+                suggestions = ["AI Error: Failed to parse evaluation data. Please try again."]
 
             # Save to history
             try:
@@ -386,10 +339,20 @@ Job Description:
             })
             
         conn.close()
+
+        # Prepare Chart Data
+        chart_data = {
+            "resume_labels": [row['created_at'].strftime('%b %d') if hasattr(row['created_at'], 'strftime') else str(row['created_at']) for row in reversed(history)],
+            "resume_scores": [row['score'] for row in reversed(history)],
+            "interview_labels": [row['date'].strftime('%b %d') if hasattr(row['date'], 'strftime') else str(row['date']) for row in reversed(interview_history)],
+            "interview_scores": [row['score'] for row in reversed(interview_history)]
+        }
+
     except Exception as e:
         print(f"Error fetching history: {e}")
+        chart_data = {"resume_labels": [], "resume_scores": [], "interview_labels": [], "interview_scores": []}
 
-    return render_template("dashboard.html", history=history, interview_history=interview_history)
+    return render_template("dashboard.html", history=history, interview_history=interview_history, chart_data=json.dumps(chart_data))
 
 
 @app.route('/generate-questions', methods=['POST'])
@@ -410,7 +373,8 @@ def generate_questions():
             resume_text = request.form.get('resume_text', "")
 
         if not resume_text:
-            return "Please upload a resume or provide resume text"
+            flash("Please upload a resume or provide resume text")
+            return redirect(url_for('dashboard'))
 
         resume_text = resume_text[:3000]
 
@@ -478,6 +442,7 @@ Rules:
     all_q = basic_q + resume_q
 
     session["all_questions"] = all_q
+    session["interview_start_time"] = datetime.utcnow().timestamp()
 
     return render_template("ai_interview.html")
 
@@ -538,6 +503,11 @@ def final_evaluation():
     cheating       = data.get("cheating", {})
     questions_list = session.get("all_questions", [])
 
+    # Anti-Cheat Timing Logic
+    start_time = session.get("interview_start_time", 0)
+    duration = datetime.utcnow().timestamp() - start_time
+    total_words = sum(len(str(ans).split()) for ans in answers)
+
     # Biometric Analytics
     frames     = face.get("frames", 1)
     stability  = round((face.get("stability", 0) / frames) * 10, 2)
@@ -562,6 +532,7 @@ def final_evaluation():
 You are a SENIOR TECHNICAL RECRUITER and INTEGRITY SPECIALIST. Evaluate this mock interview.
 
 INTEGRITY DATA (Biometrics & Object Detection):
+- Interview Duration: {round(duration, 1)} seconds
 - Phone Detections: {phone}
 - Book Detections: {book}
 - Multiple People Detections: {extra_people}
@@ -608,6 +579,13 @@ Q&A:
             raw = match.group(0)
             
         result_data = json.loads(raw)
+
+        # Override if timing is suspicious (Short time + Detailed answers)
+        if duration < 15 and total_words > 20:
+            result_data["overall_score"] = 0
+            result_data["final_verdict"] = "Failed (Cheating)"
+            result_data["behavioral_analysis"]["cheating_risk"] = "High"
+            result_data["behavioral_analysis"]["observations"] = f"Suspiciously fast submission ({round(duration, 1)}s) with detailed answers. Integrity breach detected."
 
     except Exception as e:
         print(f"Final evaluation parse error: {e}")
@@ -733,6 +711,79 @@ def download_report():
         )
     except Exception as e:
         return f"PDF Error: {e}"
+
+
+@app.route("/send-email-report", methods=["POST"])
+def send_email_report():
+    if "user" not in session:
+        return {"status": "error", "message": "Unauthorized"}, 401
+
+    try:
+        data = request.get_json()
+        recipient_email = data.get("email")
+        if not recipient_email:
+            return {"status": "error", "message": "Email is required"}, 400
+
+        username = session["user"]
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT result_json FROM interview_scores WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row:
+            return {"status": "error", "message": "No report found"}, 404
+
+        report_data = json.loads(row["result_json"])
+
+        # Generate PDF (Reusing simplified version of download_report logic)
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(0, 10, "Interview Performance Report", ln=True, align='C')
+        pdf.ln(10)
+        pdf.set_font("Arial", '', 12)
+        pdf.cell(0, 10, f"Candidate: {username}", ln=True)
+        pdf.cell(0, 10, f"Overall Score: {report_data['overall_score']}/10", ln=True)
+        pdf.cell(0, 10, f"Verdict: {report_data['final_verdict']}", ln=True)
+        pdf.ln(10)
+        pdf.multi_cell(0, 10, f"Observations: {report_data['behavioral_analysis']['observations']}")
+
+        pdf_content = pdf.output(dest='S')
+        
+        # Email Configuration
+        sender_email = os.getenv("SENDER_EMAIL")
+        sender_password = os.getenv("SENDER_PASSWORD") # App Password
+        
+        if not sender_email or not sender_password:
+            return {"status": "error", "message": "SMTP not configured on server"}, 500
+
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = recipient_email
+        msg['Subject'] = f"Your ATS.AI Interview Report - {username}"
+
+        body = f"Hello {username},\n\nPlease find attached your detailed AI Interview Performance Report.\n\nBest Regards,\nATS.AI Team"
+        msg.attach(MIMEText(body, 'plain'))
+
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(pdf_content)
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f"attachment; filename= Interview_Report_{username}.pdf")
+        msg.attach(part)
+
+        # Send Email
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+
+        return {"status": "ok", "message": "Report emailed successfully!"}
+
+    except Exception as e:
+        print(f"Email Error: {e}")
+        return {"status": "error", "message": str(e)}, 500
 
 
 # ─────────────────────────────────────────────────────────────
@@ -907,6 +958,42 @@ def delete_analysis(analysis_id):
         print(f"Delete Error: {e}")
 
     return redirect(url_for('dashboard'))
+
+
+@app.route('/generate-roadmap', methods=['POST'])
+def generate_roadmap():
+    if "user" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    try:
+        data = request.get_json()
+        skills = data.get("skills", [])
+
+        if not skills:
+            return {"roadmap": "No missing skills identified. You're on the right track!"}
+
+        prompt = f"""
+You are a Senior Career Mentor and Technical Instructor.
+
+Generate a highly structured 4-Week Learning Roadmap to help a candidate master these missing skills:
+{", ".join(skills)}
+
+STRICT FORMATTING RULES:
+- Break it down by Week 1, Week 2, Week 3, Week 4.
+- For each week, provide 2-3 specific topics to study.
+- Include 1-2 free resource names (like "Official Docs" or "FreeCodeCamp").
+- Keep it concise and professional.
+- Use **bold** for key topics.
+
+Candidate's goal: Mastering these gaps to qualify for their target job.
+"""
+
+        roadmap = get_ai_completion(prompt)
+        return {"roadmap": roadmap}
+
+    except Exception as e:
+        print(f"Roadmap Error: {e}")
+        return {"roadmap": "Error generating roadmap. Please try again later."}, 500
 
 
 @app.route('/view-interview/<int:interview_id>')

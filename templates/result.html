@@ -63,7 +63,14 @@
 
             <!-- Missing Skills -->
             <section class="card full-width">
-                <h3 class="card-title title-danger">❌ Missing Keywords</h3>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <h3 class="card-title title-danger" style="margin-bottom: 0;">❌ Missing Keywords</h3>
+                    {% if missing %}
+                    <button id="roadmap-btn" onclick="generateRoadmap()" class="btn btn-ghost" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border: 1px solid var(--border);">
+                        🗺️ Generate 4-Week Study Plan
+                    </button>
+                    {% endif %}
+                </div>
                 <div class="skill-chips">
                     {% for skill in missing %}
                         <span class="chip chip-danger">{{ skill }}</span>
@@ -72,6 +79,11 @@
                 {% if not missing %}
                     <p class="empty-msg">No critical missing keywords found!</p>
                 {% endif %}
+
+                <div id="roadmap-container" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(99, 102, 241, 0.05); border-radius: 0.5rem; border: 1px dashed var(--primary);">
+                    <h4 style="margin-bottom: 1rem; color: var(--primary);">🚀 Your AI Learning Roadmap</h4>
+                    <div id="roadmap-content" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);"></div>
+                </div>
             </section>
 
             <!-- Suggestions -->
@@ -100,5 +112,43 @@
 
     </main>
 
+    <script>
+        async function generateRoadmap() {
+            const btn = document.getElementById('roadmap-btn');
+            const container = document.getElementById('roadmap-container');
+            const content = document.getElementById('roadmap-content');
+            
+            const missingSkills = Array.from(document.querySelectorAll('.chip-danger')).map(c => c.innerText);
+            
+            if (missingSkills.length === 0) return;
+
+            btn.disabled = true;
+            btn.innerText = "⏳ Planning your path...";
+            container.style.display = "block";
+            content.innerHTML = "<em>Analyzing skills and crafting a custom roadmap...</em>";
+
+            try {
+                const response = await fetch('/generate-roadmap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ skills: missingSkills })
+                });
+                
+                const data = await response.json();
+                
+                // Convert AI markdown-style or newlines to HTML
+                let formattedResult = data.roadmap
+                    .replace(/\n/g, '<br>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                
+                content.innerHTML = formattedResult;
+                btn.innerText = "✅ Roadmap Ready";
+            } catch (err) {
+                content.innerHTML = "<span style='color: var(--danger);'>Error generating roadmap. Please try again.</span>";
+                btn.disabled = false;
+                btn.innerText = "🗺️ Retry Roadmap";
+            }
+        }
+    </script>
 </body>
 </html>

@@ -262,3 +262,9 @@ textarea:focus {
     color: var(--text-muted);
     font-weight: 500;
 }
+
+@media (max-width: 640px) {
+    .analytics-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

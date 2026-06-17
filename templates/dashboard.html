@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -31,6 +32,16 @@
                 <h1 class="title">Intelligence Dashboard</h1>
                 <p class="subtitle">Analyze resumes and generate interview questions with precision.</p>
             </header>
+
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+                {% for message in messages %}
+                  <div class="alert" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; font-weight: 500;">
+                    ⚠️ {{ message }}
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
 
             <div class="card">
                 <form id="analysis-form" method="POST" enctype="multipart/form-data">
@@ -63,6 +74,22 @@
                         </button>
                     </div>
                 </form>
+            </div>
+
+            <!-- Analytics Section -->
+            <div class="analytics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+                <div class="card" style="padding: 1.5rem;">
+                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">📈 Resume Match Trend</h3>
+                    <div style="height: 180px; width: 100%;">
+                        <canvas id="resumeChart"></canvas>
+                    </div>
+                </div>
+                <div class="card" style="padding: 1.5rem;">
+                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">📊 Interview Performance</h3>
+                    <div style="height: 180px; width: 100%;">
+                        <canvas id="interviewChart"></canvas>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -157,6 +184,63 @@
                 document.getElementById('loading-overlay').style.display = 'flex';
             }
         }
+
+        // Chart Initialization
+        const chartData = JSON.parse('{{ chart_data|safe }}');
+
+        // Resume Chart
+        const resumeCtx = document.getElementById('resumeChart').getContext('2d');
+        new Chart(resumeCtx, {
+            type: 'line',
+            data: {
+                labels: chartData.resume_labels,
+                datasets: [{
+                    label: 'Match %',
+                    data: chartData.resume_scores,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointBackgroundColor: '#6366f1',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        // Interview Chart
+        const interviewCtx = document.getElementById('interviewChart').getContext('2d');
+        new Chart(interviewCtx, {
+            type: 'bar',
+            data: {
+                labels: chartData.interview_labels,
+                datasets: [{
+                    label: 'Score',
+                    data: chartData.interview_scores,
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 6,
+                    barThickness: 20
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
     </script>
 </body>
 </html>
