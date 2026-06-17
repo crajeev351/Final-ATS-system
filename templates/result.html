@@ -3,150 +3,294 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analysis Report | ATS.AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <title>Analysis Result | ATS.AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root { --primary: #6366f1; --accent: #a855f7; --bg-dark: #020617; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); overflow-x: hidden; }
+        h1, h2, .logo { font-family: 'Space Grotesk', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .gradient-text { background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        .orb { position: fixed; border-radius: 50%; filter: blur(80px); z-index: -1; pointer-events: none; animation: drift 20s infinite alternate ease-in-out; }
+        @keyframes drift { from { transform: translate(0, 0); } to { transform: translate(100px, 100px); } }
+        .tilt-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .tilt-card:hover { transform: translateY(-10px) scale(1.02); border-color: rgba(99, 102, 241, 0.4); }
+        
+        /* Markdown Styling */
+        .roadmap-rich-text h1, .roadmap-rich-text h2, .roadmap-rich-text h3 { color: #fff; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .roadmap-rich-text p { margin-bottom: 1rem; }
+        .roadmap-rich-text ul, .roadmap-rich-text ol { margin-left: 1.5rem; margin-bottom: 1rem; list-style-type: disc; }
+        .roadmap-rich-text strong { color: var(--primary); font-weight: 700; }
+        .roadmap-rich-text a { color: var(--accent); text-decoration: underline; font-weight: 600; }
+    </style>
 </head>
-<body>
+<body class="text-slate-200 min-h-screen pb-20">
 
-    <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
-        <div class="nav-links">
-            <a href="/dashboard" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">← Dashboard</a>
+    <canvas id="bg-canvas"></canvas>
+    <div class="orb w-[400px] h-[400px] bg-indigo-500/10 top-[-10%] -left-20"></div>
+    <div class="orb w-[300px] h-[300px] bg-purple-500/10 bottom-[-10%] -right-20" style="animation-delay: -5s;"></div>
+
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 mb-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="text-3xl font-black tracking-tighter">ATS<span class="gradient-text">.AI</span></a>
+            <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Dashboard
+            </a>
         </div>
     </nav>
 
-    <main class="container-full" style="max-width: 1000px; padding-top: 3rem; padding-bottom: 5rem;">
+    <main class="max-w-6xl mx-auto px-6">
         
-        <header class="report-header card">
-            <div class="header-main">
-                <div class="score-container">
-                    <div class="circular-progress">
-                        <svg>
-                            <circle class="bg" cx="60" cy="60" r="54"></circle>
-                            <circle class="fg" cx="60" cy="60" r="54" style="stroke-dashoffset: calc(339 - (339 * {{ score }}) / 100);"></circle>
-                        </svg>
-                        <div class="percentage">{{ score }}<span>%</span></div>
-                    </div>
-                    <div class="score-info">
-                        <h2>Analysis Result</h2>
-                        <p>Match score based on AI validation</p>
-                    </div>
-                </div>
-                <div class="header-actions">
-                    <button onclick="window.print()" class="btn btn-ghost">🖨️ Print</button>
-                </div>
+        <div class="flex flex-col md:flex-row justify-between items-center gap-10 mb-16" data-aos="fade-down">
+            <div class="text-center md:text-left">
+                <h1 class="text-5xl md:text-6xl font-black tracking-tighter mb-4 leading-none text-white">Analysis <span class="gradient-text">Complete</span></h1>
+                <p class="text-slate-400 text-lg max-w-xl">We've identified your strengths and pinpointed the critical gaps to bridge for this role.</p>
             </div>
-        </header>
-
-        <div class="results-grid">
-            <!-- Technical Skills -->
-            <section class="card skill-card">
-                <h3 class="card-title">🛠️ Technical Skills</h3>
-                <div class="skill-chips">
-                    {% for skill in matched_tech %}
-                        <span class="chip chip-success">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </section>
-
-            <!-- Soft Skills -->
-            <section class="card skill-card">
-                <h3 class="card-title">🤝 Soft Skills</h3>
-                <div class="skill-chips">
-                    {% for skill in matched_soft %}
-                        <span class="chip chip-accent">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </section>
-
-            <!-- Missing Skills -->
-            <section class="card full-width">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-                    <h3 class="card-title title-danger" style="margin-bottom: 0;">❌ Missing Keywords</h3>
-                    {% if missing %}
-                    <button id="roadmap-btn" onclick="generateRoadmap()" class="btn btn-ghost" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border: 1px solid var(--border);">
-                        🗺️ Generate 4-Week Study Plan
-                    </button>
-                    {% endif %}
-                </div>
-                <div class="skill-chips">
-                    {% for skill in missing %}
-                        <span class="chip chip-danger">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-                {% if not missing %}
-                    <p class="empty-msg">No critical missing keywords found!</p>
-                {% endif %}
-
-                <div id="roadmap-container" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(99, 102, 241, 0.05); border-radius: 0.5rem; border: 1px dashed var(--primary);">
-                    <h4 style="margin-bottom: 1rem; color: var(--primary);">🚀 Your AI Learning Roadmap</h4>
-                    <div id="roadmap-content" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);"></div>
-                </div>
-            </section>
-
-            <!-- Suggestions -->
-            <section class="card full-width">
-                <h3 class="card-title">💡 Strategic Advice</h3>
-                <ul class="advice-list">
-                    {% for tip in suggestions %}
-                        <li>{{ tip|safe }}</li>
-                    {% endfor %}
-                </ul>
-            </section>
+            <div class="relative w-40 h-48 flex flex-col items-center justify-center glass rounded-[2.5rem] border-indigo-500/20 shadow-[0_0_40px_rgba(99,102,241,0.1)]">
+                <div id="score-counter" class="text-5xl font-black text-white leading-none mb-1">0</div>
+                <div class="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">Match %</div>
+                <div class="absolute -bottom-2 w-12 h-1.5 bg-indigo-500 rounded-full blur-sm animate-pulse"></div>
+            </div>
         </div>
 
-        <footer class="report-footer">
-            <form action="/optimize-resume" method="POST">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <!-- Skills Matched -->
+            <div class="glass p-10 rounded-[3rem] tilt-card" data-aos="fade-right">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-400 border border-green-500/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-tight text-white">Skills Found</h2>
+                </div>
+                <div class="flex flex-wrap gap-2.5">
+                    {% for skill in matched_tech %}
+                    <span class="px-4 py-2 bg-slate-900/50 text-green-400 text-xs font-black rounded-xl border border-white/5 uppercase tracking-wider">{{ skill }}</span>
+                    {% endfor %}
+                    {% for skill in matched_soft %}
+                    <span class="px-4 py-2 bg-slate-900/50 text-indigo-400 text-xs font-black rounded-xl border border-white/5 uppercase tracking-wider">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Missing Skills -->
+            <div class="glass p-10 rounded-[3rem] tilt-card border-red-500/10" data-aos="fade-left">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-400 border border-red-500/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold tracking-tight text-white">Missing Gaps</h2>
+                </div>
+                <div class="flex flex-wrap gap-2.5 mb-8">
+                    {% for skill in missing %}
+                    <span class="px-4 py-2 bg-slate-900/50 text-red-400 text-xs font-black rounded-xl border border-white/5 uppercase tracking-wider">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+                {% if missing %}
+                <button onclick="generateRoadmap()" id="roadmap-btn" class="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 transition-all transform hover:scale-[1.02] text-xs uppercase tracking-[0.1em] particle-btn">
+                    🗺️ CURATE LEARNING PATH
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Strategic Advice -->
+        <div class="glass p-10 rounded-[3rem] mb-12 relative overflow-hidden" data-aos="fade-up">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full -mr-16 -mt-16 blur-3xl"></div>
+            <h2 class="text-2xl font-bold tracking-tight text-white mb-10 flex items-center gap-4">
+                <span class="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-400">💡</span>
+                Strategic Recommendations
+            </h2>
+            <div id="suggestions-list" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                <!-- Suggestions will be typed here -->
+            </div>
+        </div>
+
+        <!-- Roadmap -->
+        <div id="roadmap-section" class="hidden glass p-10 rounded-[3rem] mb-12 border-indigo-500/30">
+            <h2 class="text-2xl font-bold text-white mb-8 flex items-center gap-4">
+                <span class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white">🗺️</span>
+                Accelerated Roadmap
+            </h2>
+            <div id="roadmap-content" class="text-slate-300 leading-loose whitespace-pre-line font-light bg-slate-900/30 p-8 rounded-3xl border border-white/5"></div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex flex-col sm:flex-row justify-center gap-6 mt-16" data-aos="zoom-in">
+            <form action="/generate-questions" method="POST" class="w-full sm:w-auto">
+                <input type="hidden" name="resume_text" value="{{ resume_text }}">
+                <button type="submit" class="w-full px-12 py-5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black rounded-3xl shadow-[0_20px_50px_rgba(99,102,241,0.3)] transition-all transform hover:-translate-y-1 text-sm uppercase tracking-widest particle-btn">
+                    🎙️ START INTERVIEW SIM
+                </button>
+            </form>
+            <form action="/optimize-resume" method="POST" class="w-full sm:w-auto">
                 <input type="hidden" name="resume_text" value="{{ resume_text }}">
                 <input type="hidden" name="job_desc" value="{{ job_desc }}">
-                <button type="submit" class="btn btn-primary" style="width: 100%; background: var(--accent);">✨ Smart Resume Rewrites</button>
+                <button type="submit" class="w-full px-12 py-5 bg-white/5 hover:bg-white/10 text-slate-300 font-black rounded-3xl border border-white/10 transition-all transform hover:-translate-y-1 text-sm uppercase tracking-widest particle-btn">
+                    ✨ OPTIMIZE CONTENT
+                </button>
             </form>
-
-            <form action="/generate-questions" method="POST">
-                <input type="hidden" name="resume_text" value="{{ resume_text }}">
-                <button type="submit" class="btn btn-primary" style="width: 100%;">🧠 Generate Interview Questions</button>
-            </form>
-        </footer>
+        </div>
 
     </main>
 
     <script>
+        AOS.init({ duration: 1000, once: true });
+        
+        // --- GLOBAL FUTURISTIC UTILITIES ---
+        
+        // 1. Counter Animation
+        function animateCounter(id, target) {
+            let current = 0;
+            const increment = target / 50;
+            const element = document.getElementById(id);
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    element.innerText = Math.round(target);
+                    clearInterval(timer);
+                } else {
+                    element.innerText = Math.round(current);
+                }
+            }, 30);
+        }
+
+        // 2. Typewriter Animation
+        async function typeWriter(text, element, speed = 20) {
+            for (let i = 0; i < text.length; i++) {
+                element.innerHTML += text.charAt(i);
+                await new Promise(r => setTimeout(r, speed));
+            }
+        }
+
+        // 3. Particle Click Effect
+        document.querySelectorAll('.particle-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                for (let i = 0; i < 10; i++) {
+                    const p = document.createElement('div');
+                    p.classList.add('fixed', 'pointer-events-none', 'z-[200]');
+                    p.style.width = '4px'; p.style.height = '4px';
+                    p.style.background = '#6366f1';
+                    p.style.left = e.clientX + 'px'; p.style.top = e.clientY + 'px';
+                    p.style.borderRadius = '50%';
+                    p.style.boxShadow = '0 0 10px #6366f1';
+                    document.body.appendChild(p);
+                    
+                    const angle = Math.random() * Math.PI * 2;
+                    const velocity = 2 + Math.random() * 5;
+                    let opacity = 1;
+                    let x = e.clientX; let y = e.clientY;
+
+                    const move = setInterval(() => {
+                        x += Math.cos(angle) * velocity;
+                        y += Math.sin(angle) * velocity;
+                        opacity -= 0.02;
+                        p.style.left = x + 'px'; p.style.top = y + 'px';
+                        p.style.opacity = opacity;
+                        if (opacity <= 0) { clearInterval(move); p.remove(); }
+                    }, 16);
+                }
+            });
+        });
+
+        // Initialize on load
+        window.onload = () => {
+            animateCounter('score-counter', {{ score }});
+            
+            // Type out suggestions
+            const suggestions = {{ suggestions | tojson | safe }};
+            const container = document.getElementById('suggestions-list');
+            
+            suggestions.forEach((sug, i) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "flex gap-5 group";
+                wrapper.innerHTML = `<div class="mt-1 w-2 h-2 rounded-full bg-indigo-500 shrink-0"></div><p id="sug-${i}" class="text-slate-300 leading-relaxed text-sm font-light"></p>`;
+                container.appendChild(wrapper);
+                setTimeout(() => {
+                    typeWriter(sug, document.getElementById(`sug-${i}`));
+                }, i * 800);
+            });
+        };
+
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        function init() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            points = []; for(let i=0; i<40; i++) points.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3});
+        }
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='rgba(99,102,241,0.1)';
+            for(let i=0; i<points.length; i++){
+                let p = points[i]; p.x+=p.vx; p.y+=p.vy;
+                if(p.x<0||p.x>canvas.width) p.vx*=-1; if(p.y<0||p.y>canvas.height) p.vy*=-1;
+                for(let j=i+1; j<points.length; j++){
+                    let p2=points[j]; let d=Math.hypot(p.x-p2.x, p.y-p2.y);
+                    if(d<300){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+        window.onresize = init; init(); draw();
+
         async function generateRoadmap() {
             const btn = document.getElementById('roadmap-btn');
-            const container = document.getElementById('roadmap-container');
+            const section = document.getElementById('roadmap-section');
             const content = document.getElementById('roadmap-content');
-            
-            const missingSkills = Array.from(document.querySelectorAll('.chip-danger')).map(c => c.innerText);
-            
-            if (missingSkills.length === 0) return;
-
-            btn.disabled = true;
-            btn.innerText = "⏳ Planning your path...";
-            container.style.display = "block";
-            content.innerHTML = "<em>Analyzing skills and crafting a custom roadmap...</em>";
-
+            btn.disabled = true; btn.innerText = "⚡ GENERATING PATH...";
             try {
-                const response = await fetch('/generate-roadmap', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ skills: missingSkills })
-                });
-                
+                const response = await fetch('/generate-roadmap', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ skills: {{ missing | tojson }} }) });
                 const data = await response.json();
                 
-                // Convert AI markdown-style or newlines to HTML
-                let formattedResult = data.roadmap
-                    .replace(/\n/g, '<br>')
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                // --- FIXED: Parse Markdown to HTML and animate ---
+                const htmlContent = marked.parse(data.roadmap);
+                section.classList.remove('hidden');
+                section.scrollIntoView({ behavior: 'smooth' });
                 
-                content.innerHTML = formattedResult;
-                btn.innerText = "✅ Roadmap Ready";
+                // Use a dedicated typing function for HTML content
+                await typeWriterHTML(htmlContent, content);
+                
+                btn.innerText = "✅ PATH SECURED";
             } catch (err) {
-                content.innerHTML = "<span style='color: var(--danger);'>Error generating roadmap. Please try again.</span>";
+                content.innerHTML = "<span class='text-red-400 font-bold'>Protocol Error. Please retry.</span>";
                 btn.disabled = false;
-                btn.innerText = "🗺️ Retry Roadmap";
+                btn.innerText = "🗺️ RETRY CURATION";
+            }
+        }
+
+        async function typeWriterHTML(html, element, speed = 5) {
+            element.innerHTML = "";
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = html;
+            const nodes = Array.from(tempDiv.childNodes);
+            
+            for (let node of nodes) {
+                const clone = node.cloneNode(true);
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const text = node.textContent;
+                    for (let i = 0; i < text.length; i++) {
+                        element.innerHTML += text.charAt(i);
+                        await new Promise(r => setTimeout(r, speed));
+                    }
+                } else {
+                    // For tags, we append the container and then type inside if it has text
+                    const tag = document.createElement(node.tagName);
+                    // Copy classes/attributes
+                    Array.from(node.attributes).forEach(attr => tag.setAttribute(attr.name, attr.value));
+                    tag.classList.add('roadmap-rich-text');
+                    element.appendChild(tag);
+                    
+                    if (node.childNodes.length > 0) {
+                        await typeWriterHTML(node.innerHTML, tag, speed);
+                    } else {
+                        tag.innerHTML = node.innerHTML;
+                    }
+                }
             }
         }
     </script>

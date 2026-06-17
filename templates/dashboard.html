@@ -4,206 +4,410 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard | ATS.AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
-<body>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.5);
+            --accent: #a855f7;
+            --bg-dark: #020617;
+        }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); overflow-x: hidden; }
+        h1, h2, .logo { font-family: 'Space Grotesk', sans-serif; }
 
-    <div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(12px);">
-        <div class="spinner"></div>
-        <p class="loading-text">AI is analyzing your resume...</p>
-        <p class="loading-subtext">This may take a few seconds</p>
+        .glass { 
+            background: rgba(15, 23, 42, 0.7); 
+            backdrop-filter: blur(16px); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        
+        .gradient-text { 
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .btn-hologram {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .btn-hologram::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: rotate(45deg);
+            transition: 0.5s;
+            pointer-events: none;
+        }
+        .btn-hologram:hover::after {
+            left: 100%;
+            top: 100%;
+        }
+
+        .neon-border {
+            position: relative;
+        }
+        .neon-border::before {
+            content: '';
+            position: absolute;
+            inset: -1px;
+            background: linear-gradient(45deg, var(--primary), var(--accent));
+            z-index: -1;
+            border-radius: inherit;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .neon-border:hover::before {
+            opacity: 0.4;
+            filter: blur(8px);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            pointer-events: none;
+            animation: drift 20s infinite alternate ease-in-out;
+        }
+        @keyframes drift {
+            from { transform: translate(0, 0); }
+            to { transform: translate(100px, 100px); }
+        }
+    </style>
+</head>
+<body class="text-slate-200 min-h-screen">
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="orb w-[400px] h-[400px] bg-indigo-500/10 top-[-10%] -left-20"></div>
+    <div class="orb w-[300px] h-[300px] bg-purple-500/10 bottom-[-10%] -right-20" style="animation-delay: -5s;"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 z-[100] bg-slate-950/95 backdrop-blur-2xl flex flex-col items-center justify-center hidden">
+        <div class="relative w-32 h-32 mb-10">
+            <div class="absolute inset-0 border-2 border-indigo-500/10 rounded-full"></div>
+            <div class="absolute inset-0 border-t-2 border-indigo-500 rounded-full animate-spin"></div>
+        </div>
+        <p class="text-2xl font-black tracking-widest text-white mb-2 uppercase">Analyzing Data</p>
+        <p class="text-indigo-400 font-medium animate-pulse">Processing your resume and job details...</p>
     </div>
 
-    <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
-        <div class="nav-links">
-            <span class="nav-user">Welcome, <b>{{ session['user'] }}</b></span>
-            <a href="/logout" class="logout-btn">Logout</a>
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="text-3xl font-black tracking-tighter hover:scale-105 transition-transform">ATS<span class="gradient-text">.AI</span></a>
+            <div class="flex items-center gap-6">
+                <div class="hidden md:flex flex-col items-end">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Welcome back,</span>
+                    <span class="text-sm font-bold text-white">{{ session['user'] }}</span>
+                </div>
+                <div class="h-8 w-[1px] bg-white/10 hidden md:block"></div>
+                <a href="/logout" class="btn-hologram px-6 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-black rounded-xl border border-red-500/20 transition-all uppercase tracking-widest">Logout</a>
+            </div>
         </div>
     </nav>
 
-    <main class="dashboard-grid container-full">
-        <!-- Left Column: Input -->
-        <section class="main-content">
-            <header class="page-header">
-                <h1 class="title">Intelligence Dashboard</h1>
-                <p class="subtitle">Analyze resumes and generate interview questions with precision.</p>
-            </header>
-
-            {% with messages = get_flashed_messages() %}
-              {% if messages %}
+    <main class="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
                 {% for message in messages %}
-                  <div class="alert" style="background: rgba(239, 68, 68, 0.1); border: 1px solid #ef4444; color: #ef4444; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1.5rem; font-weight: 500;">
-                    ⚠️ {{ message }}
-                  </div>
+                <div data-aos="fade-down" class="mb-8 glass border-red-500/30 text-red-400 px-6 py-4 rounded-2xl flex items-center gap-4">
+                    <span class="text-lg">⚠️</span> <span class="font-bold tracking-tight">{{ message }}</span>
+                </div>
                 {% endfor %}
-              {% endif %}
-            {% endwith %}
+            {% endif %}
+        {% endwith %}
 
-            <div class="card">
-                <form id="analysis-form" method="POST" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <div class="label-row">
-                            <label for="job_desc">Job Description</label>
-                            <span id="char-count" class="badge">0 chars</span>
+        <!-- Simplified Hero Section -->
+        <div class="mb-16" data-aos="fade-up">
+            <h1 class="text-5xl md:text-7xl font-black tracking-tighter mb-4 leading-none">AI Career <span class="gradient-text">Dashboard</span></h1>
+            <p class="text-slate-400 text-lg max-w-2xl font-light leading-relaxed">Optimize your resume for any job and practice interviews with intelligent AI feedback.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+            
+            <!-- Analysis Input -->
+            <div class="lg:col-span-2 glass p-8 rounded-[2.5rem] shadow-2xl neon-border" data-aos="fade-right">
+                <h2 class="text-xl font-bold mb-8 flex items-center gap-3">
+                    <span class="text-indigo-400">⚡</span> Start New Analysis
+                </h2>
+
+                <form id="analysis-form" method="POST" enctype="multipart/form-data" class="space-y-8">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center px-1">
+                            <label class="text-xs font-bold uppercase tracking-widest text-slate-500">Job Description</label>
+                            <span id="char-count" class="text-[10px] font-mono text-slate-500">0 characters</span>
                         </div>
-                        <textarea id="job_desc" name="job_desc" placeholder="Paste the job description here..." required oninput="document.getElementById('char-count').innerText = this.value.length + ' chars'"></textarea>
+                        <textarea id="job_desc" name="job_desc" required placeholder="Paste the job requirements here..."
+                            class="w-full bg-slate-900/30 border border-white/5 rounded-3xl px-6 py-5 text-white placeholder:text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all min-h-[200px]"
+                            oninput="document.getElementById('char-count').innerText = this.value.length + ' characters'"></textarea>
                     </div>
-
-                    <div class="form-group">
-                        <label>Resume Document</label>
-                        <div id="drop-zone" class="drop-zone">
-                            <div class="drop-icon">📁</div>
-                            <div class="drop-text">
-                                <p id="file-name">Click or drag & drop PDF/DOCX</p>
-                                <span>Max file size: 10MB</span>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-end">
+                        <div class="space-y-3">
+                            <label class="text-xs font-bold uppercase tracking-widest text-slate-500 px-1">Your Resume</label>
+                            <div id="drop-zone" class="relative group cursor-pointer border border-dashed border-white/10 hover:border-indigo-500/40 bg-slate-900/20 rounded-3xl p-8 text-center transition-all">
+                                <input type="file" id="resume" name="resume" accept=".pdf,.docx" required class="hidden">
+                                <div class="text-3xl mb-2 opacity-50 group-hover:scale-110 transition-transform">📄</div>
+                                <p id="file-name" class="text-sm font-bold text-slate-400">Select PDF or DOCX</p>
+                                <p class="text-[10px] text-slate-600 mt-2 uppercase tracking-tighter">Max Size: 10MB</p>
                             </div>
-                            <input type="file" id="resume" name="resume" accept=".pdf,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required style="display: none;">
                         </div>
-                    </div>
 
-                    <div class="action-grid">
-                        <button type="submit" onclick="showLoading()" class="btn btn-primary">
-                            ⚡ Run ATS Analysis
-                        </button>
-                        <button formaction="/generate-questions" onclick="showLoading()" formmethod="post" class="btn btn-ghost">
-                            🧠 Generate Questions
-                        </button>
+                        <div class="space-y-4">
+                            <button type="submit" onclick="showLoading()" class="btn-hologram w-full bg-indigo-600 hover:bg-indigo-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-indigo-500/20 transition-all transform hover:-translate-y-1">
+                                ANALYZE RESUME
+                            </button>
+                            <button formaction="/generate-questions" onclick="showLoading()" formmethod="post" class="w-full bg-white/5 hover:bg-white/10 text-slate-400 font-bold py-4 rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-3 text-xs uppercase tracking-widest">
+                                🧠 GENERATE INTERVIEW QUESTIONS
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
 
-            <!-- Analytics Section -->
-            <div class="analytics-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
-                <div class="card" style="padding: 1.5rem;">
-                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">📈 Resume Match Trend</h3>
-                    <div style="height: 180px; width: 100%;">
-                        <canvas id="resumeChart"></canvas>
-                    </div>
-                </div>
-                <div class="card" style="padding: 1.5rem;">
-                    <h3 style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">📊 Interview Performance</h3>
-                    <div style="height: 180px; width: 100%;">
-                        <canvas id="interviewChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Right Column: History -->
-        <aside class="sidebar">
-            <h2 class="section-title">Resume Analysis</h2>
-            {% if history %}
-            <div class="history-list">
-                {% for item in history %}
-                <div class="history-card">
-                    <div class="history-info">
-                        <div class="history-score">{{ item.score }}%</div>
-                        <div class="history-meta">
-                            <span class="history-date">{{ item.created_at.strftime('%b %d, %H:%M') }}</span>
+            <!-- Trends Card - FIXED ALIGNMENT -->
+            <div class="glass p-8 rounded-[2.5rem] shadow-2xl flex flex-col relative overflow-hidden" data-aos="fade-left">
+                <h2 class="text-xl font-bold mb-8 flex items-center gap-3">
+                    <span class="text-purple-400">📈</span> Performance Trends
+                </h2>
+                
+                <div class="flex-1 flex flex-col gap-8">
+                    <div class="flex-1 min-h-[140px] relative">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Resume Match Match %</p>
+                        <div class="absolute inset-0 pt-6">
+                            <canvas id="resumeChart"></canvas>
                         </div>
                     </div>
-                    <div class="history-actions">
-                        <a href="/view-analysis/{{ item.id }}" class="history-btn view" title="View Report">👁️</a>
-                        <a href="/delete-analysis/{{ item.id }}" class="history-btn delete" title="Delete">🗑️</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <p>No resume history found.</p>
-            </div>
-            {% endif %}
-
-            <h2 class="section-title" style="margin-top: 3rem;">Interview History</h2>
-            {% if interview_history %}
-            <div class="history-list">
-                {% for item in interview_history %}
-                <div class="history-card">
-                    <div class="history-info">
-                        <div class="history-score" style="background: var(--accent);">{{ item.score }}/10</div>
-                        <div class="history-meta">
-                            <span class="history-date" style="font-weight: 700; color: var(--text-main);">{{ item.verdict }}</span>
-                            <span class="history-date">{{ item.date.strftime('%b %d') }}</span>
+                    <div class="flex-1 min-h-[140px] relative">
+                        <p class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 ml-1">Interview Scores</p>
+                        <div class="absolute inset-0 pt-6">
+                            <canvas id="interviewChart"></canvas>
                         </div>
                     </div>
-                    <div class="history-actions">
-                        <a href="/view-interview/{{ item.id }}" class="history-btn view" title="View Report">👁️</a>
-                        <a href="/delete-interview/{{ item.id }}" class="history-btn delete" title="Delete">🗑️</a>
+                </div>
+
+                <div class="mt-8 pt-8 border-t border-white/5 grid grid-cols-2 gap-4 text-center">
+                    <div>
+                        <div class="text-2xl font-black text-white leading-none">{{ history|length }}</div>
+                        <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Resumes</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-black text-white leading-none">{{ interview_history|length }}</div>
+                        <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Interviews</div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-            {% else %}
-            <div class="empty-state">
-                <p>No interview history found.</p>
+        </div>
+
+        <!-- History Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            
+            <!-- Resume History -->
+            <div class="space-y-6" data-aos="fade-up">
+                <h2 class="text-2xl font-bold tracking-tight px-2">Analysis History</h2>
+                <div class="space-y-4">
+                    {% for item in history %}
+                    <div class="glass p-6 rounded-3xl flex items-center justify-between group hover:scale-[1.01] hover:border-indigo-500/30 transition-all duration-300">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 rounded-2xl bg-slate-900/50 flex flex-col items-center justify-center border border-white/5">
+                                <span class="text-lg font-black text-white counter-value" data-target="{{ item.score }}">{{ item.score }}</span>
+                                <span class="text-[8px] font-black text-indigo-400/60 uppercase tracking-tighter">%</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-200">ATS Match Result</h3>
+                                <p class="text-[10px] font-mono text-slate-500 uppercase">{{ item.created_at.strftime('%b %d, %Y') }}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="/view-analysis/{{ item.id }}" class="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-indigo-500 text-slate-400 hover:text-white rounded-xl transition-all particle-btn">👁️</a>
+                            <a href="/delete-analysis/{{ item.id }}" class="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-red-500 text-slate-400 hover:text-white rounded-xl transition-all particle-btn">🗑️</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not history %}
+                    <div class="py-16 text-center glass rounded-[2rem] border-dashed border-white/5">
+                        <p class="text-slate-600 text-sm italic">No records found.</p>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
-            {% endif %}
-        </aside>
+
+            <!-- Interview History -->
+            <div class="space-y-6" data-aos="fade-up" data-aos-delay="200">
+                <h2 class="text-2xl font-bold tracking-tight px-2">Interview Logs</h2>
+                <div class="space-y-4">
+                    {% for item in interview_history %}
+                    <div class="glass p-6 rounded-3xl flex items-center justify-between group hover:scale-[1.01] hover:border-purple-500/30 transition-all duration-300">
+                        <div class="flex items-center gap-5">
+                            <div class="w-14 h-14 rounded-2xl bg-slate-900/50 flex flex-col items-center justify-center border border-white/5">
+                                <span class="text-lg font-black text-purple-400 counter-value" data-target="{{ item.score }}">{{ item.score }}</span>
+                                <span class="text-[8px] font-black text-slate-500 uppercase tracking-tighter">/10</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-200">{{ item.verdict }}</h3>
+                                <p class="text-[10px] font-mono text-slate-500 uppercase">{{ item.date.strftime('%b %d, %Y') }}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="/view-interview/{{ item.id }}" class="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-purple-500 text-slate-400 hover:text-white rounded-xl transition-all particle-btn">👁️</a>
+                            <a href="/delete-interview/{{ item.id }}" class="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-red-500 text-slate-400 hover:text-white rounded-xl transition-all particle-btn">🗑️</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% if not interview_history %}
+                    <div class="py-16 text-center glass rounded-[2rem] border-dashed border-white/5">
+                        <p class="text-slate-600 text-sm italic">No interview records yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </main>
 
+    <footer class="max-w-7xl mx-auto px-6 py-20 text-center opacity-30">
+        <p class="text-[10px] font-black tracking-widest uppercase text-slate-500">&copy; 2026 ATS.AI // Professional Career Suite</p>
+    </footer>
+
     <script>
+        AOS.init({ duration: 800, once: true, easing: 'ease-out' });
+
+        // --- GLOBAL FUTURISTIC UTILITIES ---
+        function animateCounter(el, target) {
+            let current = 0; const step = target / 30;
+            const timer = setInterval(() => {
+                current += step;
+                if (current >= target) { el.innerText = target; clearInterval(timer); }
+                else { el.innerText = Math.floor(current); }
+            }, 20);
+        }
+
+        document.querySelectorAll('.particle-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                for(let i=0; i<8; i++){
+                    const p = document.createElement('div');
+                    p.className = 'fixed pointer-events-none z-[200] w-1 h-1 rounded-full bg-indigo-500';
+                    p.style.left = e.clientX+'px'; p.style.top = e.clientY+'px';
+                    p.style.boxShadow = '0 0 8px #6366f1';
+                    document.body.appendChild(p);
+                    const a = Math.random()*Math.PI*2; const v = 1+Math.random()*4;
+                    let o = 1; let x = e.clientX; let y = e.clientY;
+                    const m = setInterval(() => {
+                        x += Math.cos(a)*v; y += Math.sin(a)*v; o -= 0.03;
+                        p.style.left = x+'px'; p.style.top = y+'px'; p.style.opacity = o;
+                        if(o<=0){ clearInterval(m); p.remove(); }
+                    }, 16);
+                }
+            });
+        });
+
+        window.onload = () => {
+            document.querySelectorAll('.counter-value').forEach(el => {
+                animateCounter(el, parseInt(el.dataset.target));
+            });
+        };
+
+        // Background Mesh Script
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        const maxPoints = 50;
+
+        function initCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            points = [];
+            for (let i = 0; i < maxPoints; i++) {
+                points.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4 });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(99, 102, 241, 0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < points.length; i++) {
+                let p = points[i];
+                p.x += p.vx; p.y += p.vy;
+                if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+                if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+                for (let j = i + 1; j < points.length; j++) {
+                    let p2 = points[j];
+                    let dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                    if (dist < 280) { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+        window.addEventListener('resize', initCanvas);
+        initCanvas(); draw();
+
+        // Drop Zone Logic
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('resume');
         const fileName = document.getElementById('file-name');
-
         dropZone.onclick = () => fileInput.click();
-
-        dropZone.ondragover = (e) => {
-            e.preventDefault();
-            dropZone.classList.add('active');
-        };
-
-        dropZone.ondragleave = () => {
-            dropZone.classList.remove('active');
-        };
-
-        dropZone.ondrop = (e) => {
-            e.preventDefault();
-            dropZone.classList.remove('active');
-            fileInput.files = e.dataTransfer.files;
-            updateFileName();
-        };
-
+        dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500'); };
+        dropZone.ondragleave = () => { dropZone.classList.remove('border-indigo-500'); };
+        dropZone.ondrop = (e) => { e.preventDefault(); dropZone.classList.remove('border-indigo-500'); fileInput.files = e.dataTransfer.files; updateFileName(); };
         fileInput.onchange = () => updateFileName();
 
         function updateFileName() {
             if (fileInput.files.length > 0) {
                 fileName.innerText = fileInput.files[0].name;
-                dropZone.classList.add('has-file');
+                fileName.classList.add('text-indigo-400');
             }
         }
 
         function showLoading() {
             const form = document.getElementById('analysis-form');
-            if (form.checkValidity()) {
-                document.getElementById('loading-overlay').style.display = 'flex';
+            if (form.checkValidity()) { 
+                document.getElementById('loading-overlay').classList.remove('hidden'); 
             }
         }
 
-        // Chart Initialization
+        // --- IMPROVED CHARTS ---
         const chartData = JSON.parse('{{ chart_data|safe }}');
+        const fontStyle = { size: 10, family: "'Inter', sans-serif" };
 
-        // Resume Chart
-        const resumeCtx = document.getElementById('resumeChart').getContext('2d');
-        new Chart(resumeCtx, {
+        new Chart(document.getElementById('resumeChart').getContext('2d'), {
             type: 'line',
             data: {
                 labels: chartData.resume_labels,
                 datasets: [{
-                    label: 'Match %',
                     data: chartData.resume_scores,
                     borderColor: '#6366f1',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
                     borderWidth: 3,
+                    pointBackgroundColor: '#fff',
+                    pointRadius: 4,
                     tension: 0.4,
                     fill: true,
-                    pointBackgroundColor: '#6366f1',
-                    pointRadius: 4
+                    backgroundColor: 'rgba(99, 102, 241, 0.05)'
                 }]
             },
             options: {
@@ -211,33 +415,25 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.05)' } },
-                    x: { grid: { display: false } }
+                    x: { grid: { display: false }, ticks: { color: '#475569', font: fontStyle } },
+                    y: { beginAtZero: true, max: 100, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569', font: fontStyle } }
                 }
             }
         });
 
-        // Interview Chart
-        const interviewCtx = document.getElementById('interviewChart').getContext('2d');
-        new Chart(interviewCtx, {
+        new Chart(document.getElementById('interviewChart').getContext('2d'), {
             type: 'bar',
             data: {
                 labels: chartData.interview_labels,
-                datasets: [{
-                    label: 'Score',
-                    data: chartData.interview_scores,
-                    backgroundColor: '#8b5cf6',
-                    borderRadius: 6,
-                    barThickness: 20
-                }]
+                datasets: [{ data: chartData.interview_scores, backgroundColor: '#a855f7', borderRadius: 5, barThickness: 12 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { beginAtZero: true, max: 10, grid: { color: 'rgba(0,0,0,0.05)' } },
-                    x: { grid: { display: false } }
+                    x: { grid: { display: false }, ticks: { color: '#475569', font: fontStyle } },
+                    y: { beginAtZero: true, max: 10, grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#475569', font: fontStyle } }
                 }
             }
         });

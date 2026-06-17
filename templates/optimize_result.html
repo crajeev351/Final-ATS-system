@@ -4,133 +4,147 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resume Optimization | ATS.AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='result.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;500;700&display=swap" rel="stylesheet">
     <style>
-        .suggestion-card {
-            margin-bottom: 2rem;
-            transition: transform 0.2s;
-        }
-        .suggestion-card:hover {
-            transform: translateY(-4px);
-        }
-        .suggestion-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        .suggestion-num {
-            background: var(--primary);
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-        }
-        .suggestion-title {
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        .rewrite-grid {
-            display: grid;
-            gap: 1.25rem;
-            margin-bottom: 1.5rem;
-        }
-        .box-label {
-            font-weight: 600;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-        .original-box, .improved-box {
-            padding: 1rem;
-            border-radius: var(--radius-md);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-        .original-box {
-            background: rgba(244, 63, 94, 0.05);
-            border: 1px solid rgba(244, 63, 94, 0.1);
-            color: #fca5a5;
-            text-decoration: line-through;
-        }
-        .improved-box {
-            background: rgba(16, 185, 129, 0.05);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #6ee7b7;
-            font-weight: 500;
-        }
-        .reason-box {
-            display: flex;
-            gap: 1rem;
-            padding: 1.25rem;
-            background: var(--bg-input);
-            border-radius: var(--radius-md);
-            font-size: 0.9rem;
-            border: 1px solid var(--border);
-        }
-        .reason-icon { font-size: 1.2rem; }
+        :root { --primary: #6366f1; --accent: #a855f7; --bg-dark: #020617; }
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); overflow-x: hidden; }
+        h1, h2, .logo { font-family: 'Space Grotesk', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .gradient-text { background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; opacity: 0.3; }
+        .orb { position: fixed; border-radius: 50%; filter: blur(80px); z-index: -1; pointer-events: none; animation: drift 20s infinite alternate ease-in-out; }
+        @keyframes drift { from { transform: translate(0, 0); } to { transform: translate(100px, 100px); } }
+        .improved-text { background: rgba(16, 185, 129, 0.05); color: #6ee7b7; border-left: 4px solid #10b981; }
+        .original-text { background: rgba(244, 63, 94, 0.05); color: #fca5a5; border-left: 4px solid #ef4444; opacity: 0.8; }
     </style>
 </head>
-<body>
+<body class="text-slate-200 min-h-screen pb-20">
 
-    <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
-        <div class="nav-links">
-            <a href="/dashboard" class="btn btn-ghost" style="padding: 0.5rem 1rem; font-size: 0.8rem;">← Dashboard</a>
+    <canvas id="bg-canvas"></canvas>
+    <div class="orb w-[400px] h-[400px] bg-indigo-500/10 top-[-10%] -left-20"></div>
+    <div class="orb w-[300px] h-[300px] bg-purple-500/10 bottom-[-10%] -right-20" style="animation-delay: -5s;"></div>
+
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 mb-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="text-3xl font-black tracking-tighter">ATS<span class="gradient-text">.AI</span></a>
+            <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                Dashboard
+            </a>
         </div>
     </nav>
 
-    <main class="container-full" style="max-width: 850px; padding-top: 3rem; padding-bottom: 5rem;">
-        <header style="margin-bottom: 3rem; text-align: center;">
-            <h1 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem;">AI Smart Rewrites</h1>
-            <p style="color: var(--text-muted);">Specific, high-impact improvements for your resume lines.</p>
+    <main class="max-w-4xl mx-auto px-6">
+        
+        <header class="text-center mb-16 px-4" data-aos="fade-down">
+            <h1 class="text-5xl md:text-6xl font-black tracking-tighter mb-4 leading-none text-white italic pb-1">Smart <span class="gradient-text">Rewrites</span></h1>
+            <p class="text-slate-400 text-lg max-w-xl mx-auto">AI-powered sentence refinement to bypass ATS filters and impress recruiters.</p>
         </header>
 
-        <div class="suggestions-container">
+        <div class="space-y-10">
             {% for sug in suggestions %}
-            <div class="card suggestion-card">
-                <div class="suggestion-header">
-                    <div class="suggestion-num">{{ loop.index }}</div>
-                    <div class="suggestion-title">Optimization Suggestion</div>
+            <div class="glass p-8 md:p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group hover:border-indigo-500/30 transition-all" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 }}">
+                <div class="flex items-center gap-5 mb-10">
+                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center font-black text-xl shadow-lg shadow-indigo-500/20 group-hover:scale-110 transition-transform">
+                        {{ loop.index }}
+                    </div>
+                    <h2 class="text-xl font-bold text-white tracking-tight">Optimization Logic</h2>
                 </div>
 
-                <div class="rewrite-grid">
+                <div class="space-y-8 mb-10">
                     <div>
-                        <span class="box-label">Original Sentence</span>
-                        <div class="original-box">{{ sug.original }}</div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 mb-3 block ml-1">Original Fragment</label>
+                        <div class="original-text p-6 rounded-2xl text-sm leading-relaxed italic line-through">
+                            {{ sug.original }}
+                        </div>
                     </div>
                     <div>
-                        <span class="box-label">Improved Version</span>
-                        <div class="improved-box">{{ sug.improved }}</div>
+                        <label class="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-3 block ml-1">Augmented Version</label>
+                        <div class="improved-text p-6 rounded-2xl text-base font-medium leading-relaxed shadow-inner">
+                            {{ sug.improved }}
+                        </div>
                     </div>
                 </div>
 
-                <div class="reason-box">
-                    <span class="reason-icon">💡</span>
+                <div class="bg-slate-900/50 p-6 rounded-2xl border border-white/5 flex gap-5 items-start">
+                    <div class="text-2xl mt-1 shrink-0">💡</div>
                     <div>
-                        <span class="box-label" style="margin-bottom: 0.25rem; color: var(--accent);">Why this works</span>
-                        <p style="color: var(--text-main);">{{ sug.reason }}</p>
+                        <p class="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-1">Strategic Reasoning</p>
+                        <p id="reason-{{ loop.index0 }}" data-text="{{ sug.reason }}" class="reason-text text-slate-400 text-sm font-light leading-relaxed"></p>
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <div style="margin-top: 4rem; text-align: center;">
-            <a href="/dashboard" class="btn btn-primary">Return to Dashboard</a>
-            <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 1.5rem;">Tip: Use these lines to replace weaker bullet points in your resume.</p>
+        <div class="mt-20 text-center" data-aos="zoom-in">
+            <a href="/dashboard" class="inline-block px-12 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-3xl shadow-[0_20px_50px_rgba(99,102,241,0.3)] transition-all transform hover:-translate-y-1 text-sm uppercase tracking-widest particle-btn">
+                Return to Dashboard
+            </a>
+            <p class="text-slate-600 text-xs font-bold uppercase tracking-[0.3em] mt-8">Secure Analysis Complete</p>
         </div>
+
     </main>
 
+    <script>
+        AOS.init({ duration: 1000, once: true });
+
+        async function typeWriter(text, element, speed = 20) {
+            for (let i = 0; i < text.length; i++) {
+                element.innerHTML += text.charAt(i);
+                await new Promise(r => setTimeout(r, speed));
+            }
+        }
+
+        document.querySelectorAll('.particle-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                for(let i=0; i<8; i++){
+                    const p = document.createElement('div');
+                    p.className = 'fixed pointer-events-none z-[200] w-1 h-1 rounded-full bg-indigo-500';
+                    p.style.left = e.clientX+'px'; p.style.top = e.clientY+'px';
+                    p.style.boxShadow = '0 0 8px #6366f1';
+                    document.body.appendChild(p);
+                    const a = Math.random()*Math.PI*2; const v = 1+Math.random()*4;
+                    let o = 1; let x = e.clientX; let y = e.clientY;
+                    const m = setInterval(() => {
+                        x += Math.cos(a)*v; y += Math.sin(a)*v; o -= 0.03;
+                        p.style.left = x+'px'; p.style.top = y+'px'; p.style.opacity = o;
+                        if(o<=0){ clearInterval(m); p.remove(); }
+                    }, 16);
+                }
+            });
+        });
+
+        window.onload = () => {
+            document.querySelectorAll('.reason-text').forEach((el, i) => {
+                setTimeout(() => {
+                    typeWriter(el.dataset.text, el);
+                }, i * 600);
+            });
+        };
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let points = [];
+        function init() {
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            points = []; for(let i=0; i<40; i++) points.push({x:Math.random()*canvas.width, y:Math.random()*canvas.height, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3});
+        }
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height); ctx.strokeStyle='rgba(99,102,241,0.1)';
+            for(let i=0; i<points.length; i++){
+                let p = points[i]; p.x+=p.vx; p.y+=p.vy;
+                if(p.x<0||p.x>canvas.width) p.vx*=-1; if(p.y<0||p.y>canvas.height) p.vy*=-1;
+                for(let j=i+1; j<points.length; j++){
+                    let p2=points[j]; let d=Math.hypot(p.x-p2.x, p.y-p2.y);
+                    if(d<300){ ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
+                }
+            }
+            requestAnimationFrame(draw);
+        }
+        window.onresize = init; init(); draw();
+    </script>
 </body>
 </html>
-

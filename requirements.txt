@@ -4,3 +4,4 @@ pdfminer.six
 openai
 python-docx
 fpdf
+gunicorn

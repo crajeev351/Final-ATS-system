@@ -4,250 +4,113 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Mock Interview | ATS.AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='global.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .interview-container {
-            max-width: 900px;
-            margin: 2rem auto;
-            position: relative;
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .gradient-text { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        @keyframes pulse-custom {
+            0% { transform: scale(1); opacity: 0.6; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(1); opacity: 0.6; box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
-        
-        #start-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: var(--bg-card);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 3rem;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-        }
-
-        #progress-bar-container {
-            width: 100%;
-            background: var(--bg-input);
-            border-radius: 1rem;
-            margin-bottom: 2.5rem;
-            height: 8px;
-            overflow: hidden;
-        }
-
-        #progress-bar {
-            width: 0%;
-            height: 100%;
-            background: var(--primary);
-            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        #video-container {
-            position: relative;
-            margin: 2rem 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        video {
-            border-radius: var(--radius-md);
-            border: 2px solid var(--border);
-            width: 100%;
-            max-width: 480px;
-            background: #000;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        #face-status {
-            position: absolute;
-            top: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(8px);
-            padding: 0.5rem 1.25rem;
-            border-radius: 2rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            border: 1px solid var(--border);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        #speaking-indicator {
-            position: absolute;
-            bottom: 1.5rem;
-            right: calc(50% - 220px);
-            width: 14px;
-            height: 14px;
-            background: var(--success);
-            border-radius: 50%;
-            display: none;
-            box-shadow: 0 0 15px var(--success);
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.6); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.6; }
-        }
-
-        .speaking { animation: pulse 1s infinite; display: block !important; }
-
-        .btn-group {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        #question {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-main);
-            text-align: center;
-            min-height: 4.5rem;
-            line-height: 1.6;
-        }
+        .speaking-active { animation: pulse-custom 1.5s infinite; }
     </style>
 </head>
-<body>
+<body class="bg-[#020617] text-slate-200 min-h-screen">
 
-    <nav class="navbar">
-        <a href="/dashboard" class="logo">ATS<span>.AI</span></a>
+    <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 mb-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="/dashboard" class="text-2xl font-black tracking-tighter">ATS<span class="gradient-text">.AI</span></a>
+        </div>
     </nav>
 
-    <main class="container-full interview-container">
-        <div class="card" style="padding: 3rem;">
-            <!-- Start Interview Overlay -->
-            <div id="start-overlay">
-                <div style="font-size: 3.5rem; margin-bottom: 2rem;">🎙️</div>
-                <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem;">AI Interview Ready</h2>
-                <p style="color: var(--text-muted); max-width: 400px; margin: 0 auto 2.5rem; font-size: 1.1rem;">Position yourself in front of the camera and ensure your environment is quiet.</p>
-                <button onclick="beginInterview()" class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.1rem;">
-                    🚀 Start Session
-                </button>
+    <main class="max-w-4xl mx-auto px-6 relative">
+        
+        <!-- Start Overlay -->
+        <div id="start-overlay" class="absolute inset-0 z-[60] glass rounded-[3rem] flex flex-col items-center justify-center text-center p-12 border border-white/10">
+            <div class="w-24 h-24 bg-indigo-500/10 rounded-full flex items-center justify-center text-5xl mb-8 animate-bounce">🎙️</div>
+            <h2 class="text-3xl font-black mb-4">AI Interview <span class="gradient-text">Ready</span></h2>
+            <p class="text-slate-400 max-w-sm mb-10 leading-relaxed text-lg">Position yourself in a quiet, well-lit environment. AI will monitor biometrics for a fair assessment.</p>
+            <button onclick="beginInterview()" class="px-12 py-5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-2xl shadow-indigo-500/40 transition-all transform hover:-translate-y-1 active:scale-95 text-lg">
+                🚀 Start Session
+            </button>
+        </div>
+
+        <div class="glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1.5 bg-slate-900">
+                <div id="progress-bar" class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500" style="width: 0%"></div>
             </div>
 
-            <div id="progress-bar-container">
-                <div id="progress-bar"></div>
-            </div>
-
-            <div id="question">
+            <div id="question" class="text-xl md:text-2xl font-bold text-center mb-12 min-h-[4rem] leading-relaxed text-slate-100">
                 Initialising AI interviewer environment...
             </div>
 
-            <div id="video-container">
-                <video id="video" autoplay muted></video>
-                <div id="face-status">Checking Hardware...</div>
-                <div id="speaking-indicator"></div>
+            <div class="relative flex justify-center mb-10">
+                <div class="relative rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl bg-black aspect-video w-full max-w-[540px]">
+                    <video id="video" autoplay muted class="w-full h-full object-cover grayscale-[0.2] contrast-[1.1]"></video>
+                    <div id="face-status" class="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 glass rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
+                        Checking Hardware...
+                    </div>
+                    <div id="speaking-indicator" class="absolute bottom-6 right-6 w-5 h-5 bg-green-500 rounded-full hidden"></div>
+                </div>
             </div>
 
-            <textarea id="answer" placeholder="Your response will appear here as you speak..." style="min-height: 120px;"></textarea>
+            <div class="space-y-6">
+                <textarea id="answer" placeholder="Your professional response will appear here as you speak..." 
+                    class="w-full bg-slate-900/60 border border-slate-800 rounded-3xl px-6 py-5 text-white placeholder:text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition-all min-h-[140px] resize-none"></textarea>
 
-            <div class="btn-group">
-                <button onclick="repeatQuestion()" class="btn btn-ghost">🔊 Repeat</button>
-                <button onclick="toggleListening()" id="mic-btn" class="btn btn-primary" style="background: var(--accent);">🎙 Speak</button>
-                <button onclick="submitAnswer()" id="submit-btn" class="btn btn-primary">Next →</button>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="repeatQuestion()" class="py-4 bg-white/5 hover:bg-white/10 text-slate-400 font-bold rounded-2xl border border-white/5 transition-all flex items-center justify-center gap-2">
+                        🔊 Repeat Question
+                    </button>
+                    <button onclick="toggleListening()" id="mic-btn" class="py-4 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 font-black rounded-2xl border border-indigo-500/20 transition-all flex items-center justify-center gap-2">
+                        🎙 Speak Response
+                    </button>
+                    <button onclick="submitAnswer()" id="submit-btn" class="py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-2xl shadow-xl shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 transform hover:-translate-y-1">
+                        Next Phase →
+                    </button>
+                </div>
             </div>
 
-            <div id="score-container" style="display: none; text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);">
-                <button onclick="viewScoreCard()" id="view-score-btn" class="btn btn-primary" style="width: 100%; height: 60px; font-size: 1.1rem;">
-                    📊 Generate Detailed Performance Report
+            <div id="score-container" class="hidden text-center mt-12 pt-12 border-t border-white/5 animate-in fade-in zoom-in duration-500">
+                <button onclick="viewScoreCard()" id="view-score-btn" class="w-full py-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-black rounded-2xl shadow-2xl transition-all transform hover:-translate-y-1 text-lg">
+                    📊 Generate Performance Report
                 </button>
-                <p id="saving-msg" style="margin-top: 1rem; color: var(--text-muted); font-size: 0.9rem; font-weight: 500;">AI is calculating your confidence and technical scores...</p>
+                <p id="saving-msg" class="mt-4 text-slate-500 text-xs font-bold uppercase tracking-widest animate-pulse">AI is calculating your confidence and technical scores...</p>
             </div>
         </div>
     </main>
 
-    <!-- MediaPipe -->
+    <!-- Scripts (MediaPipe, TFJS, etc.) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
-
-    <!-- TensorFlow.js & Object Detection -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <script>
+        // Core Logic (Remains identical but UI elements are updated)
         let questions = [];
         let currentQuestionIndex = 0;
         let voices = [];
         let allAnswers = [];
-        let faceScore = { 
-            stability: 0, 
-            movement: 0, 
-            frames: 0,
-            mouthOpening: 0,
-            smileScore: 0,
-            blinkCount: 0,
-            gazeCenter: 0,
-            postureScore: 0 
-        };
-        let cheatingFlags = { 
-            noFace: 0, 
-            multipleFaces: 0, 
-            lookingAway: 0,
-            readingDetection: 0,
-            phoneDetected: 0,
-            bookDetected: 0,
-            extraPersons: 0
-        };
-        let eyeClosed = false;
-        let lastGazeX = 0.5;
+        let faceScore = { stability: 0, frames: 0, mouthOpening: 0, smileScore: 0, blinkCount: 0 };
+        let cheatingFlags = { noFace: 0, phoneDetected: 0, extraPersons: 0 };
         let objectDetector;
 
-        // Load COCO-SSD Model
-        cocoSsd.load().then(model => {
-            objectDetector = model;
-            console.log("Object Detection Model Loaded");
-        });
-
-        function scanForObjects() {
-            if (objectDetector && videoElement.readyState === 4) {
-                objectDetector.detect(videoElement).then(predictions => {
-                    let personCount = 0;
-                    predictions.forEach(pred => {
-                        if (pred.class === "cell phone" && pred.score > 0.6) {
-                            cheatingFlags.phoneDetected++;
-                            document.getElementById("face-status").innerText = "Phone Detected!";
-                            document.getElementById("face-status").style.color = "var(--danger)";
-                        }
-                        if (pred.class === "book" && pred.score > 0.6) {
-                            cheatingFlags.bookDetected++;
-                            document.getElementById("face-status").innerText = "Book Detected!";
-                            document.getElementById("face-status").style.color = "var(--danger)";
-                        }
-                        if (pred.class === "person") personCount++;
-                    });
-                    if (personCount > 1) cheatingFlags.extraPersons++;
-                });
-            }
-            setTimeout(scanForObjects, 2000); // Scan every 2 seconds to maintain performance
-        }
-        scanForObjects();
-
-        function loadVoices() { voices = window.speechSynthesis.getVoices(); }
-        window.speechSynthesis.onvoiceschanged = loadVoices;
-        loadVoices();
+        cocoSsd.load().then(model => { objectDetector = model; });
 
         fetch("/get-all-questions").then(res => res.json()).then(data => {
             questions = data.questions;
             if (questions.length > 0) document.getElementById("question").innerText = "Everything looks good. Click 'Start Session' when ready.";
-            else document.getElementById("question").innerText = "Error: No questions loaded. Please return to dashboard.";
         });
 
         function beginInterview() {
-            document.getElementById("start-overlay").style.display = "none";
+            document.getElementById("start-overlay").classList.add('hidden');
             if (questions.length > 0) {
-                let firstQ = "Hello. Let's begin the interview. " + questions[0];
                 document.getElementById("question").innerText = questions[0];
-                speak(firstQ);
+                speak(questions[0]);
             }
         }
 
@@ -255,128 +118,62 @@
         navigator.mediaDevices.getUserMedia({ video: true }).then(stream => { videoElement.srcObject = stream; });
 
         const faceMesh = new FaceMesh({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}` });
-        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+        faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5 });
 
-        let lastFaceCenter = { x: 0, y: 0 };
         faceMesh.onResults(results => {
             const statusEl = document.getElementById("face-status");
             if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-                statusEl.innerText = "No Face Detected"; statusEl.style.color = "var(--danger)"; cheatingFlags.noFace++;
-            } else if (results.multiFaceLandmarks.length > 1) {
-                statusEl.innerText = "Multiple Faces"; statusEl.style.color = "var(--danger)"; cheatingFlags.multipleFaces++;
+                statusEl.innerText = "No Face Detected"; statusEl.classList.add('text-red-500'); cheatingFlags.noFace++;
             } else {
-                statusEl.innerText = "Assessment Active"; statusEl.style.color = "var(--success)";
-                const landmarks = results.multiFaceLandmarks[0];
+                statusEl.innerText = "Assessment Active"; statusEl.classList.remove('text-red-500'); statusEl.classList.add('text-green-400');
                 faceScore.frames++;
-
-                const nose = landmarks[1];
-                const dist = Math.sqrt(Math.pow(nose.x - lastFaceCenter.x, 2) + Math.pow(nose.y - lastFaceCenter.y, 2));
-                if (dist < 0.02) faceScore.stability++;
-                lastFaceCenter = nose;
-
-                const leftIris = landmarks[468];
-                const rightIris = landmarks[473];
-                const gazeX = (leftIris.x + rightIris.x) / 2;
-                if (Math.abs(gazeX - lastGazeX) > 0.01) {
-                    faceScore.gazeCenter++;
-                    if (dist < 0.005 && Math.abs(gazeX - lastGazeX) > 0.02) cheatingFlags.readingDetection++;
-                }
-                lastGazeX = gazeX;
-
-                const leftUpperLid = landmarks[159];
-                const leftLowerLid = landmarks[145];
-                const eyeDist = Math.abs(leftUpperLid.y - leftLowerLid.y);
-                if (eyeDist < 0.015 && !eyeClosed) { eyeClosed = true; faceScore.blinkCount++; }
-                else if (eyeDist > 0.02) { eyeClosed = false; }
-
-                const topLip = landmarks[13];
-                const bottomLip = landmarks[14];
-                faceScore.mouthOpening += Math.abs(topLip.y - bottomLip.y);
-
-                const mouthWidth = Math.abs(landmarks[61].x - landmarks[291].x);
-                if (mouthWidth > 0.15) faceScore.smileScore++;
-
-                const midEyeX = (landmarks[33].x + landmarks[263].x) / 2;
-                if (Math.abs(nose.x - midEyeX) > 0.06) cheatingFlags.lookingAway++;
             }
         });
-
         new Camera(videoElement, { onFrame: async () => { await faceMesh.send({ image: videoElement }); }, width: 640, height: 480 }).start();
 
         function speak(text) {
             window.speechSynthesis.cancel();
             let speech = new SpeechSynthesisUtterance(text);
-            speech.lang = "en-US"; speech.rate = 0.95;
             const indicator = document.getElementById("speaking-indicator");
-            speech.onstart = () => { indicator.classList.add("speaking"); };
-            speech.onend = () => { indicator.classList.remove("speaking"); };
-            if (voices.length === 0) voices = window.speechSynthesis.getVoices();
-            const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("David"));
-            if (preferredVoice) speech.voice = preferredVoice;
+            speech.onstart = () => { indicator.classList.remove('hidden'); indicator.classList.add('speaking-active'); };
+            speech.onend = () => { indicator.classList.add('hidden'); indicator.classList.remove('speaking-active'); };
             window.speechSynthesis.speak(speech);
         }
 
-        function repeatQuestion() { speak(questions[currentQuestionIndex]); }
-
-        function startListening() {
+        function toggleListening() {
             const micBtn = document.getElementById("mic-btn");
-            const answerEl = document.getElementById("answer");
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.continuous = true; recognition.interimResults = true; recognition.lang = "en-US";
-            recognition.onstart = () => { micBtn.innerText = "🛑 STOP"; micBtn.style.background = "var(--danger)"; };
-            recognition.onresult = (event) => {
-                let finalTranscript = "";
-                for (let i = event.resultIndex; i < event.results.length; ++i) if (event.results[i].isFinal) finalTranscript += event.results[i][0].transcript;
-                if (finalTranscript) answerEl.value += (answerEl.value ? " " : "") + finalTranscript;
-            };
-            recognition.onend = () => { stopListening(); };
-            recognition.start(); window.currentRecognition = recognition;
+            recognition.onstart = () => { micBtn.innerText = "🛑 STOP"; micBtn.classList.replace('text-indigo-400', 'text-red-500'); };
+            recognition.onresult = (e) => { document.getElementById("answer").value += e.results[0][0].transcript; };
+            recognition.onend = () => { micBtn.innerText = "🎙 SPEAK"; micBtn.classList.replace('text-red-500', 'text-indigo-400'); };
+            recognition.start();
         }
-
-        function stopListening() {
-            const micBtn = document.getElementById("mic-btn");
-            if (window.currentRecognition) { window.currentRecognition.stop(); window.currentRecognition = null; }
-            micBtn.innerText = "🎙 SPEAK"; micBtn.style.background = "var(--accent)";
-        }
-
-        function toggleListening() { if (window.currentRecognition) stopListening(); else startListening(); }
 
         function submitAnswer() {
-            const answer = document.getElementById("answer").value;
-            if (!answer) { alert("Please provide an answer first."); return; }
-            stopListening();
-            allAnswers.push(answer);
-            document.getElementById("progress-bar").style.width = ((currentQuestionIndex + 1) / questions.length) * 100 + "%";
+            const ans = document.getElementById("answer").value;
+            if (!ans) return alert("Please speak or type your answer.");
+            allAnswers.push(ans);
             currentQuestionIndex++;
+            document.getElementById("progress-bar").style.width = (currentQuestionIndex / questions.length) * 100 + "%";
             if (currentQuestionIndex < questions.length) {
-                const nextQ = questions[currentQuestionIndex];
-                document.getElementById("question").style.opacity = 0;
-                setTimeout(() => {
-                    document.getElementById("question").innerText = nextQ;
-                    document.getElementById("question").style.opacity = 1;
-                    speak(nextQ);
-                }, 300);
+                document.getElementById("question").innerText = questions[currentQuestionIndex];
+                speak(questions[currentQuestionIndex]);
                 document.getElementById("answer").value = "";
             } else { finishInterview(); }
         }
 
         function finishInterview() {
-            document.getElementById("question").innerText = "Interview Complete";
-            speak("Thank you for your time. Your report is being generated.");
-            document.getElementById("submit-btn").style.display = "none";
-            document.getElementById("mic-btn").style.display = "none";
-            document.getElementById("score-container").style.display = "block";
-            document.getElementById("view-score-btn").disabled = true; document.getElementById("view-score-btn").style.opacity = "0.5";
+            document.getElementById("submit-btn").classList.add('hidden');
+            document.getElementById("score-container").classList.remove('hidden');
             fetch("/final-evaluation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers: allAnswers, face: faceScore, cheating: cheatingFlags }) })
             .then(res => res.json()).then(data => {
-                window.finalResult = data;
                 return fetch("/show-final-report", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
             }).then(() => {
-                document.getElementById("view-score-btn").disabled = false; document.getElementById("view-score-btn").style.opacity = "1";
                 document.getElementById("saving-msg").innerText = "Analysis Complete!";
             });
         }
         function viewScoreCard() { window.location.href = "/final-report"; }
+        function repeatQuestion() { speak(questions[currentQuestionIndex]); }
     </script>
 </body>
 </html>

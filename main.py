@@ -180,6 +180,11 @@ def login():
 
     return render_template('login.html', message=message)
 
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -540,9 +545,12 @@ INTEGRITY DATA (Biometrics & Object Detection):
 - Stability Score: {stability}/10
 
 STRICT SCORING CRITERIA:
-1. CHEATING: If Phone Detections > 0, Book Detections > 0, or Multiple People > 0, you MUST set "cheating_risk" to "HIGH" and "overall_score" to 0 or 1.
-2. DISQUALIFICATION: In "observations", state clearly if unauthorized objects or people were detected.
-3. ANSWERS: Penalize "I don't know" or irrelevant answers (0-2/10).
+1. CHEATING DISQUALIFICATION: If Phone Detections > 2, Book Detections > 2, or Multiple People > 2, you MUST:
+   - Set "cheating_risk" to "High".
+   - Set "final_verdict" to "Failed (Cheating)".
+   - Set "overall_score" to 0 or 1.
+   - Mention the specific detection (e.g., "Phone detected") in the "observations".
+2. ANSWERS: Penalize "I don't know" or irrelevant answers (0-2/10).
 
 Return EXACTLY this JSON structure:
 
@@ -580,12 +588,18 @@ Q&A:
             
         result_data = json.loads(raw)
 
-        # Override if timing is suspicious (Short time + Detailed answers)
-        if duration < 15 and total_words > 20:
-            result_data["overall_score"] = 0
+        # HARDCODE OVERRIDE: Ensure integrity detections are absolute
+        if phone > 2 or book > 2 or extra_people > 2:
+            result_data["overall_score"] = min(result_data["overall_score"], 1)
             result_data["final_verdict"] = "Failed (Cheating)"
             result_data["behavioral_analysis"]["cheating_risk"] = "High"
-            result_data["behavioral_analysis"]["observations"] = f"Suspiciously fast submission ({round(duration, 1)}s) with detailed answers. Integrity breach detected."
+            
+            reasons = []
+            if phone > 2: reasons.append("Mobile phone usage")
+            if book > 2: reasons.append("Reference material/book usage")
+            if extra_people > 2: reasons.append("Multiple people detected")
+            
+            result_data["behavioral_analysis"]["observations"] = f"Integrity Breach: {', '.join(reasons)} detected during session. Disqualified for cheating."
 
     except Exception as e:
         print(f"Final evaluation parse error: {e}")
@@ -711,79 +725,6 @@ def download_report():
         )
     except Exception as e:
         return f"PDF Error: {e}"
-
-
-@app.route("/send-email-report", methods=["POST"])
-def send_email_report():
-    if "user" not in session:
-        return {"status": "error", "message": "Unauthorized"}, 401
-
-    try:
-        data = request.get_json()
-        recipient_email = data.get("email")
-        if not recipient_email:
-            return {"status": "error", "message": "Email is required"}, 400
-
-        username = session["user"]
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT result_json FROM interview_scores WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
-        row = cursor.fetchone()
-        conn.close()
-
-        if not row:
-            return {"status": "error", "message": "No report found"}, 404
-
-        report_data = json.loads(row["result_json"])
-
-        # Generate PDF (Reusing simplified version of download_report logic)
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(0, 10, "Interview Performance Report", ln=True, align='C')
-        pdf.ln(10)
-        pdf.set_font("Arial", '', 12)
-        pdf.cell(0, 10, f"Candidate: {username}", ln=True)
-        pdf.cell(0, 10, f"Overall Score: {report_data['overall_score']}/10", ln=True)
-        pdf.cell(0, 10, f"Verdict: {report_data['final_verdict']}", ln=True)
-        pdf.ln(10)
-        pdf.multi_cell(0, 10, f"Observations: {report_data['behavioral_analysis']['observations']}")
-
-        pdf_content = pdf.output(dest='S')
-        
-        # Email Configuration
-        sender_email = os.getenv("SENDER_EMAIL")
-        sender_password = os.getenv("SENDER_PASSWORD") # App Password
-        
-        if not sender_email or not sender_password:
-            return {"status": "error", "message": "SMTP not configured on server"}, 500
-
-        msg = MIMEMultipart()
-        msg['From'] = sender_email
-        msg['To'] = recipient_email
-        msg['Subject'] = f"Your ATS.AI Interview Report - {username}"
-
-        body = f"Hello {username},\n\nPlease find attached your detailed AI Interview Performance Report.\n\nBest Regards,\nATS.AI Team"
-        msg.attach(MIMEText(body, 'plain'))
-
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(pdf_content)
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f"attachment; filename= Interview_Report_{username}.pdf")
-        msg.attach(part)
-
-        # Send Email
-        server = smtplib.SMTP('smtp.gmail.com', 587)
-        server.starttls()
-        server.login(sender_email, sender_password)
-        server.send_message(msg)
-        server.quit()
-
-        return {"status": "ok", "message": "Report emailed successfully!"}
-
-    except Exception as e:
-        print(f"Email Error: {e}")
-        return {"status": "error", "message": str(e)}, 500
 
 
 # ─────────────────────────────────────────────────────────────
