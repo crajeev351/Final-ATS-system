@@ -754,6 +754,26 @@ def download_report():
         row = cursor.fetchone()
         conn.close()
 
+# Custom FPDF subclass to enforce a dark background on all pages
+class DarkThemePDF(FPDF):
+    def header(self):
+        # Fill the entire page with a dark slate background (#090d16)
+        self.set_fill_color(9, 13, 22)
+        self.rect(0, 0, self.w, self.h, 'F')
+
+@app.route("/download-report")
+def download_report():
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    username = session["user"]
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT result_json FROM interview_scores WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
+        row = cursor.fetchone()
+        conn.close()
+
         if not row: return "No report found."
         data = json.loads(row["result_json"])
 
@@ -775,8 +795,8 @@ def download_report():
                 text = text.replace(orig, rep)
             return text.encode('latin-1', 'replace').decode('latin-1')
 
-        # Generate PDF
-        pdf = FPDF()
+        # Generate Dark Theme PDF
+        pdf = DarkThemePDF()
         pdf.set_margins(15, 15, 15)
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
@@ -784,12 +804,12 @@ def download_report():
         # Calculate effective page width dynamically
         epw = pdf.w - pdf.l_margin - pdf.r_margin
 
-        # Professional color palette
+        # Theme Colors (Matching the dark-theme website)
         c_indigo = (99, 102, 241)
-        c_dark = (15, 23, 42)
-        c_gray = (100, 116, 139)
-        c_light_bg = (248, 250, 252)
-        c_border = (226, 232, 240)
+        c_dark_card = (17, 24, 39)
+        c_text_white = (255, 255, 255)
+        c_text_gray = (156, 163, 175)
+        c_border = (31, 41, 55)
         c_success = (16, 185, 129)
         c_danger = (239, 68, 68)
 
@@ -799,7 +819,7 @@ def download_report():
         pdf.cell(50, 10, "ATS.AI", ln=False)
         
         pdf.set_font("Arial", '', 10)
-        pdf.set_text_color(*c_gray)
+        pdf.set_text_color(*c_text_gray)
         pdf.cell(0, 10, "INTERVIEW PERFORMANCE REPORT", ln=True, align='R')
         
         # Divider Line
@@ -810,16 +830,16 @@ def download_report():
 
         # Document Title
         pdf.set_font("Arial", 'B', 20)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         pdf.cell(epw, 12, "Interview Performance Report", ln=True)
         
         pdf.set_font("Arial", '', 11)
-        pdf.set_text_color(*c_gray)
+        pdf.set_text_color(*c_text_gray)
         pdf.cell(epw, 6, clean_pdf_text(f"Candidate: {username}   |   Generated: {datetime.now().strftime('%B %d, %Y')}"), ln=True)
         pdf.ln(6)
 
-        # Score & Verdict Card (styled block)
-        pdf.set_fill_color(*c_light_bg)
+        # Score & Verdict Card (styled block matching website dashboard)
+        pdf.set_fill_color(*c_dark_card)
         pdf.set_draw_color(*c_border)
         card_height = 25
         pdf.rect(pdf.l_margin, pdf.get_y(), epw, card_height, 'DF')
@@ -827,8 +847,8 @@ def download_report():
         # Write score & verdict inside card
         current_y = pdf.get_y()
         pdf.set_xy(pdf.l_margin + 5, current_y + 4)
-        pdf.set_font("Arial", 'B', 10)
-        pdf.set_text_color(*c_gray)
+        pdf.set_font("Arial", 'B', 9)
+        pdf.set_text_color(*c_text_gray)
         pdf.cell(45, 6, "OVERALL SCORE", ln=False)
         pdf.cell(70, 6, "VERDICT", ln=False)
         pdf.cell(0, 6, "INTEGRITY / CHEATING RISK", ln=True, align='R')
@@ -860,18 +880,18 @@ def download_report():
 
         # Behavioral Observations Section
         pdf.set_font("Arial", 'B', 13)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         pdf.cell(epw, 8, "Behavioral Observations", ln=True)
         pdf.ln(2)
         
         pdf.set_font("Arial", '', 10.5)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         pdf.multi_cell(epw, 6, clean_pdf_text(data['behavioral_analysis']['observations']))
         pdf.ln(6)
 
         # Q&A Breakdown Section
         pdf.set_font("Arial", 'B', 13)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         pdf.cell(epw, 10, "Question & Answer Breakdown", ln=True)
         pdf.ln(2)
 
@@ -886,58 +906,81 @@ def download_report():
             expert_text = item.get('expert_answer', 'Technical depth and specific examples recommended.')
             score_val = item.get('score', 0)
             
-            # Question Header
-            pdf.set_font("Arial", 'B', 11)
-            pdf.set_text_color(*c_dark)
-            pdf.cell(epw - 25, 6, clean_pdf_text(f"Q{q_num}: {question_text}"), ln=False)
+            start_y = pdf.get_y()
+            pdf.ln(3) # Top padding inside card
             
-            # Score badge on right
-            pdf.set_font("Arial", 'B', 10)
-            pdf.set_text_color(*c_indigo)
-            pdf.cell(25, 6, f"Score: {score_val}/10", ln=True, align='R')
-            pdf.ln(2)
+            # Question Header
+            pdf.set_x(pdf.l_margin + 5)
+            pdf.set_font("Arial", 'B', 11)
+            pdf.set_text_color(*c_text_white)
+            pdf.multi_cell(epw - 30, 5, clean_pdf_text(f"Q{q_num}: {question_text}"))
+            
+            end_q_y = pdf.get_y()
+            
+            # Score badge in top-right of the block
+            pdf.set_xy(pdf.w - pdf.r_margin - 20, start_y + 3)
+            pdf.set_fill_color(*c_indigo)
+            pdf.rect(pdf.w - pdf.r_margin - 20, start_y + 3, 20, 7, 'F')
+            pdf.set_text_color(*c_text_white)
+            pdf.set_font("Arial", 'B', 9.5)
+            pdf.cell(20, 7, f"{score_val}/10", ln=True, align='C')
+            
+            # Reset X to indent content inside card
+            pdf.set_xy(pdf.l_margin + 5, end_q_y + 4)
             
             # Expert Ideal Answer block
-            pdf.set_x(pdf.l_margin + 4) # Indent slightly
             pdf.set_font("Arial", 'B', 8.5)
             pdf.set_text_color(*c_indigo)
-            pdf.cell(epw - 4, 4, "EXPERT IDEAL ANSWER", ln=True)
+            pdf.cell(epw - 10, 4, "EXPERT IDEAL ANSWER", ln=True)
             
-            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_x(pdf.l_margin + 5)
             pdf.set_font("Arial", 'I', 10)
-            pdf.set_text_color(*c_gray)
-            pdf.multi_cell(epw - 8, 5, clean_pdf_text(expert_text))
+            pdf.set_text_color(*c_text_gray)
+            pdf.multi_cell(epw - 10, 5, clean_pdf_text(expert_text))
             pdf.ln(3)
             
             # Captured Response block
-            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_x(pdf.l_margin + 5)
             pdf.set_font("Arial", 'B', 8.5)
-            pdf.set_text_color(*c_gray)
-            pdf.cell(epw - 4, 4, "YOUR CAPTURED RESPONSE", ln=True)
+            pdf.set_text_color(*c_text_gray)
+            pdf.cell(epw - 10, 4, "YOUR CAPTURED RESPONSE", ln=True)
             
-            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_x(pdf.l_margin + 5)
             pdf.set_font("Arial", '', 10)
-            pdf.set_text_color(*c_dark)
-            pdf.multi_cell(epw - 8, 5, clean_pdf_text(answer_text))
+            pdf.set_text_color(*c_text_white)
+            pdf.multi_cell(epw - 10, 5, clean_pdf_text(answer_text))
             
-            # Draw a subtle separator line between Q&A blocks
-            pdf.ln(6)
+            # Pad bottom of card
+            pdf.ln(4)
+            end_y = pdf.get_y()
+            
+            # Draw card outline box dynamically
+            # Draw left thick accent bar
+            pdf.set_draw_color(*c_indigo)
+            pdf.set_line_width(1.2)
+            pdf.line(pdf.l_margin, start_y, pdf.l_margin, end_y)
+            
+            # Draw top, bottom, and right card borders in dark gray
             pdf.set_draw_color(*c_border)
             pdf.set_line_width(0.2)
-            pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
-            pdf.ln(4)
+            pdf.line(pdf.l_margin, start_y, pdf.w - pdf.r_margin, start_y)
+            pdf.line(pdf.l_margin, end_y, pdf.w - pdf.r_margin, end_y)
+            pdf.line(pdf.w - pdf.r_margin, start_y, pdf.w - pdf.r_margin, end_y)
+            
+            # Add separation space for next card
+            pdf.set_xy(pdf.l_margin, end_y + 6)
 
         # Suggestions Section
         if pdf.get_y() > 220:
             pdf.add_page()
             
         pdf.set_font("Arial", 'B', 13)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         pdf.cell(epw, 8, "Expert Suggestions", ln=True)
         pdf.ln(2)
         
         pdf.set_font("Arial", '', 10.5)
-        pdf.set_text_color(*c_dark)
+        pdf.set_text_color(*c_text_white)
         for sug in data.get('suggestions', []):
             pdf.multi_cell(epw, 6, clean_pdf_text(f"- {sug}"))
 
