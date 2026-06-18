@@ -5,3 +5,4 @@ openai
 python-docx
 fpdf
 gunicorn
+psycopg2-binary

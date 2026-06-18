@@ -11,6 +11,8 @@ from openai import OpenAI
 from fpdf import FPDF
 from flask import send_file
 import io
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 # Load environment variables from .env file
 load_dotenv(override=True)
@@ -18,28 +20,126 @@ load_dotenv(override=True)
 app = Flask(__name__)
 app.secret_key = "secret123"
 
-# SQLite Database setup
+# Database Configuration
+DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 DB_FILE = "database.db"
 
+# Custom dictionary factory for SQLite
 def dict_factory(cursor, row):
     d = {}
     for idx, col in enumerate(cursor.description):
         d[col[0]] = row[idx]
     return d
 
+# Cursor wrapper to transparently convert SQLite '?' to PostgreSQL '%s'
+class PostgreSQLCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+
+    def execute(self, query, params=None):
+        if params is None:
+            params = ()
+        # Convert SQLite '?' placeholders to PostgreSQL '%s'
+        query = query.replace('?', '%s')
+        return self.cursor.execute(query, params)
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def close(self):
+        self.cursor.close()
+
+    def __getattr__(self, name):
+        return getattr(self.cursor, name)
+
+# Connection wrapper to ensure .cursor() returns the wrapped cursor
+class PostgreSQLConnectionWrapper:
+    def __init__(self, conn):
+        self.conn = conn
+
+    def cursor(self, *args, **kwargs):
+        if 'cursor_factory' not in kwargs:
+            kwargs['cursor_factory'] = RealDictCursor
+        cursor = self.conn.cursor(*args, **kwargs)
+        return PostgreSQLCursorWrapper(cursor)
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+    def __getattr__(self, name):
+        return getattr(self.conn, name)
+
+def get_db():
+    if DATABASE_URL:
+        # PostgreSQL (Render)
+        conn = psycopg2.connect(DATABASE_URL)
+        return PostgreSQLConnectionWrapper(conn)
+    else:
+        # SQLite (Local)
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = dict_factory
+        return conn
+
+def get_cursor(conn):
+    if DATABASE_URL:
+        return conn.cursor(cursor_factory=RealDictCursor)
+    else:
+        return conn.cursor()
+
+def execute_query(cursor, query, params=None):
+    if params is None:
+        params = ()
+    if DATABASE_URL:
+        # Convert SQLite '?' placeholders to PostgreSQL '%s'
+        query = query.replace('?', '%s')
+    cursor.execute(query, params)
+    return cursor
+
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    # Create Users table
-    cursor.execute("""
+    conn = get_db()
+    cursor = get_cursor(conn)
+    
+    # Tables with syntax compatible for both or handled via replacement
+    # Using SERIAL for Postgres and AUTOINCREMENT for SQLite
+    
+    users_table = """
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """ if DATABASE_URL else """
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL
         )
-    """)
-    # Create Resume Evaluations table
-    cursor.execute("""
+    """
+    
+    eval_table = """
+        CREATE TABLE IF NOT EXISTS resume_evaluations (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            score INTEGER,
+            matched_skills TEXT,
+            missing_skills TEXT,
+            suggestions TEXT,
+            full_data TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """ if DATABASE_URL else """
         CREATE TABLE IF NOT EXISTS resume_evaluations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
@@ -50,26 +150,33 @@ def init_db():
             full_data TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
-    # Create Interview Scores table
-    cursor.execute("""
+    """
+
+    interview_table = """
+        CREATE TABLE IF NOT EXISTS interview_scores (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            result_json TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """ if DATABASE_URL else """
         CREATE TABLE IF NOT EXISTS interview_scores (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT NOT NULL,
             result_json TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-    """)
+    """
+
+    cursor.execute(users_table)
+    cursor.execute(eval_table)
+    cursor.execute(interview_table)
+    
     conn.commit()
     conn.close()
 
 # Initialize DB on start
 init_db()
-
-def get_db():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = dict_factory
-    return conn
 
 # OpenRouter Client Configuration
 client = OpenAI(
