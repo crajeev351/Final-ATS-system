@@ -757,85 +757,194 @@ def download_report():
         if not row: return "No report found."
         data = json.loads(row["result_json"])
 
+        # Helper to clean special characters that cause Latin-1 encoding errors in FPDF
+        def clean_pdf_text(text):
+            if not isinstance(text, str):
+                return str(text)
+            replacements = {
+                '\u201c': '"',  # Left double quote
+                '\u201d': '"',  # Right double quote
+                '\u2018': "'",  # Left single quote
+                '\u2019': "'",  # Right single quote
+                '\u2013': '-',  # En dash
+                '\u2014': '-',  # Em dash
+                '\u2022': '*',  # Bullet point
+                '\u2026': '...', # Ellipsis
+            }
+            for orig, rep in replacements.items():
+                text = text.replace(orig, rep)
+            return text.encode('latin-1', 'replace').decode('latin-1')
+
         # Generate PDF
         pdf = FPDF()
         pdf.set_margins(15, 15, 15)
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.add_page()
         
-        epw = pdf.epw # Effective page width
+        # Calculate effective page width dynamically
+        epw = pdf.w - pdf.l_margin - pdf.r_margin
 
-        # Header
-        pdf.set_font("Arial", 'B', 24)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(epw, 20, "Interview Performance Report", ln=True, align='C')
-        
-        pdf.set_font("Arial", '', 12)
-        pdf.set_text_color(100, 116, 139)
-        pdf.cell(epw, 10, f"Candidate: {username}", ln=True, align='C')
-        pdf.ln(10)
+        # Professional color palette
+        c_indigo = (99, 102, 241)
+        c_dark = (15, 23, 42)
+        c_gray = (100, 116, 139)
+        c_light_bg = (248, 250, 252)
+        c_border = (226, 232, 240)
+        c_success = (16, 185, 129)
+        c_danger = (239, 68, 68)
 
-        # Overall Score Card
-        pdf.set_fill_color(241, 245, 249)
-        pdf.rect(pdf.l_margin, pdf.get_y(), epw, 40, 'F')
-        
-        current_y = pdf.get_y()
-        pdf.set_xy(pdf.l_margin, current_y + 10)
+        # Header branding
         pdf.set_font("Arial", 'B', 16)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(epw, 10, f"Overall Score: {data['overall_score']}/10", ln=True, align='C')
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(epw, 10, f"Verdict: {data['final_verdict']}", ln=True, align='C')
+        pdf.set_text_color(*c_indigo)
+        pdf.cell(50, 10, "ATS.AI", ln=False)
         
-        pdf.set_xy(pdf.l_margin, current_y + 45) # Move below scorecard
+        pdf.set_font("Arial", '', 10)
+        pdf.set_text_color(*c_gray)
+        pdf.cell(0, 10, "INTERVIEW PERFORMANCE REPORT", ln=True, align='R')
+        
+        # Divider Line
+        pdf.set_draw_color(*c_border)
+        pdf.set_line_width(0.2)
+        pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+        pdf.ln(8)
 
-        # Behavioral Analysis
-        pdf.set_font("Arial", 'B', 14)
-        pdf.set_text_color(15, 23, 42)
-        pdf.cell(epw, 10, "Behavioral Observations", ln=True)
+        # Document Title
+        pdf.set_font("Arial", 'B', 20)
+        pdf.set_text_color(*c_dark)
+        pdf.cell(epw, 12, "Interview Performance Report", ln=True)
+        
         pdf.set_font("Arial", '', 11)
-        pdf.multi_cell(epw, 8, data['behavioral_analysis']['observations'])
-        pdf.ln(5)
-        pdf.cell(epw, 10, f"Cheating Risk: {data['behavioral_analysis']['cheating_risk']}", ln=True)
-        pdf.ln(10)
+        pdf.set_text_color(*c_gray)
+        pdf.cell(epw, 6, clean_pdf_text(f"Candidate: {username}   |   Generated: {datetime.now().strftime('%B %d, %Y')}"), ln=True)
+        pdf.ln(6)
 
-        # Q&A Breakdown
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(epw, 10, "Question & Answer Breakdown", ln=True)
-        pdf.ln(5)
+        # Score & Verdict Card (styled block)
+        pdf.set_fill_color(*c_light_bg)
+        pdf.set_draw_color(*c_border)
+        card_height = 25
+        pdf.rect(pdf.l_margin, pdf.get_y(), epw, card_height, 'DF')
         
-        for item in data['qa_analysis']:
-            # Ensure we don't break in the middle of a Q&A block if possible
-            if pdf.get_y() > 250: pdf.add_page()
+        # Write score & verdict inside card
+        current_y = pdf.get_y()
+        pdf.set_xy(pdf.l_margin + 5, current_y + 4)
+        pdf.set_font("Arial", 'B', 10)
+        pdf.set_text_color(*c_gray)
+        pdf.cell(45, 6, "OVERALL SCORE", ln=False)
+        pdf.cell(70, 6, "VERDICT", ln=False)
+        pdf.cell(0, 6, "INTEGRITY / CHEATING RISK", ln=True, align='R')
+        
+        pdf.set_x(pdf.l_margin + 5)
+        pdf.set_font("Arial", 'B', 14)
+        
+        # Overall Score
+        pdf.set_text_color(*c_indigo)
+        pdf.cell(45, 8, f"{data['overall_score']}/10", ln=False)
+        
+        # Verdict
+        verdict = data['final_verdict']
+        if "Cheating" in verdict or "Failed" in verdict:
+            pdf.set_text_color(*c_danger)
+        else:
+            pdf.set_text_color(*c_success)
+        pdf.cell(70, 8, clean_pdf_text(verdict.upper()), ln=False)
+        
+        # Cheating Risk
+        risk = data['behavioral_analysis'].get('cheating_risk', 'Low')
+        if risk.lower() == 'high':
+            pdf.set_text_color(*c_danger)
+        else:
+            pdf.set_text_color(*c_success)
+        pdf.cell(0, 8, risk.upper(), ln=True, align='R')
+        
+        pdf.set_xy(pdf.l_margin, current_y + card_height + 8)
 
-            pdf.set_font("Arial", 'B', 11)
-            pdf.multi_cell(epw, 8, f"Q: {item['question']}")
+        # Behavioral Observations Section
+        pdf.set_font("Arial", 'B', 13)
+        pdf.set_text_color(*c_dark)
+        pdf.cell(epw, 8, "Behavioral Observations", ln=True)
+        pdf.ln(2)
+        
+        pdf.set_font("Arial", '', 10.5)
+        pdf.set_text_color(*c_dark)
+        pdf.multi_cell(epw, 6, clean_pdf_text(data['behavioral_analysis']['observations']))
+        pdf.ln(6)
+
+        # Q&A Breakdown Section
+        pdf.set_font("Arial", 'B', 13)
+        pdf.set_text_color(*c_dark)
+        pdf.cell(epw, 10, "Question & Answer Breakdown", ln=True)
+        pdf.ln(2)
+
+        for i, item in enumerate(data['qa_analysis']):
+            # Keep Q&A blocks grouped on page if possible
+            if pdf.get_y() > 230:
+                pdf.add_page()
+                
+            q_num = i + 1
+            question_text = item['question']
+            answer_text = item['answer']
+            expert_text = item.get('expert_answer', 'Technical depth and specific examples recommended.')
+            score_val = item.get('score', 0)
             
-            pdf.set_font("Arial", 'I', 10)
-            pdf.set_text_color(99, 102, 241)
-            pdf.multi_cell(epw, 7, f"Expert Answer: {item.get('expert_answer', 'N/A')}")
+            # Question Header
+            pdf.set_font("Arial", 'B', 11)
+            pdf.set_text_color(*c_dark)
+            pdf.cell(epw - 25, 6, clean_pdf_text(f"Q{q_num}: {question_text}"), ln=False)
+            
+            # Score badge on right
+            pdf.set_font("Arial", 'B', 10)
+            pdf.set_text_color(*c_indigo)
+            pdf.cell(25, 6, f"Score: {score_val}/10", ln=True, align='R')
             pdf.ln(2)
             
-            pdf.set_font("Arial", '', 11)
-            pdf.set_text_color(15, 23, 42)
-            pdf.multi_cell(epw, 8, f"Your Answer: {item['answer']}")
+            # Expert Ideal Answer block
+            pdf.set_x(pdf.l_margin + 4) # Indent slightly
+            pdf.set_font("Arial", 'B', 8.5)
+            pdf.set_text_color(*c_indigo)
+            pdf.cell(epw - 4, 4, "EXPERT IDEAL ANSWER", ln=True)
             
-            pdf.set_font("Arial", 'B', 11)
-            pdf.set_text_color(34, 197, 94)
-            pdf.cell(epw, 8, f"Score: {item['score']}/10", ln=True)
-            pdf.set_text_color(15, 23, 42)
-            pdf.ln(5)
+            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_font("Arial", 'I', 10)
+            pdf.set_text_color(*c_gray)
+            pdf.multi_cell(epw - 8, 5, clean_pdf_text(expert_text))
+            pdf.ln(3)
+            
+            # Captured Response block
+            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_font("Arial", 'B', 8.5)
+            pdf.set_text_color(*c_gray)
+            pdf.cell(epw - 4, 4, "YOUR CAPTURED RESPONSE", ln=True)
+            
+            pdf.set_x(pdf.l_margin + 4)
+            pdf.set_font("Arial", '', 10)
+            pdf.set_text_color(*c_dark)
+            pdf.multi_cell(epw - 8, 5, clean_pdf_text(answer_text))
+            
+            # Draw a subtle separator line between Q&A blocks
+            pdf.ln(6)
+            pdf.set_draw_color(*c_border)
+            pdf.set_line_width(0.2)
+            pdf.line(pdf.l_margin, pdf.get_y(), pdf.w - pdf.r_margin, pdf.get_y())
+            pdf.ln(4)
 
-        # Suggestions
-        pdf.ln(10)
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(epw, 10, "Expert Suggestions", ln=True)
-        pdf.set_font("Arial", '', 11)
-        for sug in data['suggestions']:
-            pdf.multi_cell(epw, 8, f"- {sug}")
+        # Suggestions Section
+        if pdf.get_y() > 220:
+            pdf.add_page()
+            
+        pdf.set_font("Arial", 'B', 13)
+        pdf.set_text_color(*c_dark)
+        pdf.cell(epw, 8, "Expert Suggestions", ln=True)
+        pdf.ln(2)
+        
+        pdf.set_font("Arial", '', 10.5)
+        pdf.set_text_color(*c_dark)
+        for sug in data.get('suggestions', []):
+            pdf.multi_cell(epw, 6, clean_pdf_text(f"- {sug}"))
 
         # Output to buffer
         pdf_content = pdf.output(dest='S')
+        if isinstance(pdf_content, str):
+            pdf_content = pdf_content.encode('latin-1')
         output = io.BytesIO(pdf_content)
         output.seek(0)
 
