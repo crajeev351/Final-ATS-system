@@ -741,19 +741,6 @@ Q&A:
     return result_data
 
 
-@app.route("/download-report")
-def download_report():
-    if "user" not in session:
-        return redirect(url_for("login"))
-
-    username = session["user"]
-    try:
-        conn = get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT result_json FROM interview_scores WHERE username=? ORDER BY id DESC LIMIT 1", (username,))
-        row = cursor.fetchone()
-        conn.close()
-
 # Custom FPDF subclass to enforce a dark background on all pages
 class DarkThemePDF(FPDF):
     def header(self):
