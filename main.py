@@ -928,7 +928,8 @@ def optimize_resume():
         prompt = f"""
 You are an expert Resume Optimizer. 
 
-Based on the Job Description, suggest 5 specific sentence rewrites for this resume to make it more impactful and ATS-friendly.
+Based on the Job Description, suggest up to 5 (but at least 1) specific, unique sentence rewrites for this resume to make it more impactful and ATS-friendly. 
+If the resume is already highly optimized and has a good match, only suggest rewrites for sentences that can genuinely be improved. Do NOT repeat the same original sentence or make up redundant duplicates just to reach 5 suggestions. If there are only 1, 2, or 3 improvements needed, only return those. Do not return more than 5 under any circumstances.
 
 RETURN ONLY VALID JSON. Do not include any conversational text or markdown formatting before or after the JSON.
 
@@ -961,7 +962,17 @@ Job Description:
             # Fallback if no array brackets are found
             suggestions_list = json.loads(raw_output)
 
-        return render_template("optimize_result.html", suggestions=suggestions_list)
+        # Remove duplicate suggestions and limit to at most 5
+        unique_suggestions = []
+        seen_originals = set()
+        for sug in suggestions_list:
+            orig = sug.get("original", "").strip()
+            if orig and orig.lower() not in seen_originals:
+                seen_originals.add(orig.lower())
+                unique_suggestions.append(sug)
+        unique_suggestions = unique_suggestions[:5]
+
+        return render_template("optimize_result.html", suggestions=unique_suggestions)
 
     except Exception as e:
         print(f"Optimization Error: {e}")
