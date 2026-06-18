@@ -693,6 +693,14 @@ Q&A:
             
         result_data = json.loads(raw)
 
+        # Force actual questions and answers from session to be used in qa_analysis to prevent AI from using generic placeholders
+        if "qa_analysis" in result_data and isinstance(result_data["qa_analysis"], list):
+            for idx, item in enumerate(result_data["qa_analysis"]):
+                if idx < len(questions_list):
+                    item["question"] = questions_list[idx]
+                if idx < len(answers):
+                    item["answer"] = answers[idx]
+
         # HARDCODE OVERRIDE: Ensure integrity detections are absolute
         is_physical_cheating = (phone > 2 or book > 2 or extra_people > 2 or reading > 2 or looking_away > 10)
         if is_physical_cheating:
