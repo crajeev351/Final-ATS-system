@@ -11,9 +11,6 @@ from openai import OpenAI
 from fpdf import FPDF
 from flask import send_file
 import io
-import psycopg2
-from psycopg2.extras import RealDictCursor
-
 # Load environment variables from .env file
 load_dotenv(override=True)
 
@@ -65,6 +62,7 @@ class PostgreSQLConnectionWrapper:
 
     def cursor(self, *args, **kwargs):
         if 'cursor_factory' not in kwargs:
+            from psycopg2.extras import RealDictCursor
             kwargs['cursor_factory'] = RealDictCursor
         cursor = self.conn.cursor(*args, **kwargs)
         return PostgreSQLCursorWrapper(cursor)
@@ -84,6 +82,7 @@ class PostgreSQLConnectionWrapper:
 def get_db():
     if DATABASE_URL:
         # PostgreSQL (Render)
+        import psycopg2
         conn = psycopg2.connect(DATABASE_URL)
         return PostgreSQLConnectionWrapper(conn)
     else:
@@ -94,6 +93,7 @@ def get_db():
 
 def get_cursor(conn):
     if DATABASE_URL:
+        from psycopg2.extras import RealDictCursor
         return conn.cursor(cursor_factory=RealDictCursor)
     else:
         return conn.cursor()
