@@ -649,14 +649,12 @@ INTEGRITY DATA (Biometrics & Object Detection):
 - Book Detections: {book}
 - Multiple People Detections: {extra_people}
 - Reading Script Detection: {reading}
+- Looking Away Detections: {looking_away}
 - Stability Score: {stability}/10
 
 STRICT SCORING CRITERIA:
-1. CHEATING DISQUALIFICATION: If Phone Detections > 2, Book Detections > 2, or Multiple People > 2, you MUST:
-   - Set "cheating_risk" to "High".
-   - Set "final_verdict" to "Failed (Cheating)".
-   - Set "overall_score" to 0 or 1.
-   - Mention the specific detection (e.g., "Phone detected") in the "observations".
+1. CHEATING DISQUALIFICATION: You must ONLY set "final_verdict" to "Failed (Cheating)" and "cheating_risk" to "High" if there is clear evidence of physical cheating from the INTEGRITY DATA (e.g., Phone Detections > 2, Book Detections > 2, Multiple People > 2, Reading Script Detection > 2, or Looking Away Detections > 10).
+   Do NOT classify the candidate as "Failed (Cheating)" or "High" cheating risk based on their answers alone, even if the answers are completely irrelevant, short, or nonsensical (like answering "hii" or "I don't know"). If the candidate answers poorly but did not trigger physical cheating detections, the verdict should be "Failed" or "Needs Improvement", and cheating risk must be "Low".
 2. ANSWERS: Penalize "I don't know" or irrelevant answers (0-2/10).
 
 Return EXACTLY this JSON structure:
@@ -696,7 +694,8 @@ Q&A:
         result_data = json.loads(raw)
 
         # HARDCODE OVERRIDE: Ensure integrity detections are absolute
-        if phone > 2 or book > 2 or extra_people > 2:
+        is_physical_cheating = (phone > 2 or book > 2 or extra_people > 2 or reading > 2 or looking_away > 10)
+        if is_physical_cheating:
             result_data["overall_score"] = min(result_data["overall_score"], 1)
             result_data["final_verdict"] = "Failed (Cheating)"
             result_data["behavioral_analysis"]["cheating_risk"] = "High"
@@ -705,8 +704,16 @@ Q&A:
             if phone > 2: reasons.append("Mobile phone usage")
             if book > 2: reasons.append("Reference material/book usage")
             if extra_people > 2: reasons.append("Multiple people detected")
+            if reading > 2: reasons.append("Reading from a script")
+            if looking_away > 10: reasons.append("Looking away repeatedly")
             
             result_data["behavioral_analysis"]["observations"] = f"Integrity Breach: {', '.join(reasons)} detected during session. Disqualified for cheating."
+        else:
+            # Prevent false-positive cheating verdicts based on bad/short answers
+            if result_data.get("final_verdict") == "Failed (Cheating)":
+                result_data["final_verdict"] = "Failed"
+            if result_data.get("behavioral_analysis", {}).get("cheating_risk") == "High":
+                result_data["behavioral_analysis"]["cheating_risk"] = "Low"
 
     except Exception as e:
         print(f"Final evaluation parse error: {e}")
