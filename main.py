@@ -296,6 +296,93 @@ UPLOAD_FOLDER = 'uploads'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+import base64
+
+VISION_MODELS = [
+    "google/gemini-2.5-flash",
+    "meta-llama/llama-3.2-11b-vision-instruct",
+    "google/gemini-1.5-flash",
+    "openrouter/auto"
+]
+
+@app.route('/extract-jd-photo', methods=['POST'])
+def extract_jd_photo():
+    if "user" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    file = request.files.get('jd_photo')
+    if not file or file.filename == "":
+        return {"error": "No file uploaded"}, 400
+
+    try:
+        ext = os.path.splitext(file.filename)[1].lower()
+        if ext not in ['.png', '.jpg', '.jpeg', '.webp']:
+            return {"error": "Unsupported image format. Please upload PNG, JPG, JPEG, or WEBP."}, 400
+
+        mime_type = "image/png"
+        if ext in ['.jpg', '.jpeg']:
+            mime_type = "image/jpeg"
+        elif ext == '.webp':
+            mime_type = "image/webp"
+
+        image_bytes = file.read()
+        base64_data = base64.b64encode(image_bytes).decode('utf-8')
+
+        prompt = """
+You are an expert OCR and Document Processing system.
+Analyze the provided image of a job description.
+Extract ONLY the text that represents the Job Description itself (including job titles, duties, responsibilities, requirements, skills, qualifications, and background information about the role).
+Do NOT include website navigation, ads, headers, footers, page numbers, or unrelated sidebars.
+Strictly return ONLY the extracted job description text. Do not write any conversational intro or outro text (e.g., "Here is the text:").
+"""
+
+        extracted_text = None
+        last_error = None
+
+        for model in VISION_MODELS:
+            try:
+                print(f"[*] Extracting JD from photo using model: {model}...")
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": prompt
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{mime_type};base64,{base64_data}"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=2000,
+                    temperature=0.0,
+                    timeout=35
+                )
+                extracted_text = response.choices[0].message.content
+                print(f"[+] OCR extraction success with {model}")
+                break
+            except Exception as e:
+                print(f"[!] OCR model {model} failed: {e}")
+                last_error = e
+                continue
+
+        if not extracted_text:
+            return {"error": f"Failed to extract text from photo. Details: {last_error}"}, 500
+
+        return {"text": extracted_text.strip()}
+
+    except Exception as e:
+        print(f"OCR Endpoint Error: {e}")
+        return {"error": f"Error processing image: {e}"}, 500
+
+
 # DASHBOARD PAGE
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
@@ -321,11 +408,16 @@ You are an expert Technical Recruiter and ATS Optimization Specialist.
 
 Analyze the provided Resume against the Job Description.
 
-CRITICAL PRECISION RULES:
-1. TECHNICAL SKILLS MATCHED: List ONLY technical skills (languages, frameworks, tools) that are EXPLICITLY mentioned in the Resume AND relevant to the Job Description.
-2. SOFT SKILLS MATCHED: List ONLY professional traits EXPLICITLY found in the Resume.
-3. MISSING SKILLS: List critical technical requirements from the Job Description that are NOT in the Resume.
-4. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Provide actual examples based on the resume.
+CRITICAL PRECISION RULES FOR SKILL MATCHING AND GAP ANALYSIS:
+1. TECHNICAL SKILLS MATCHED: List ONLY technical skills (CAD software, programming languages, engineering methodologies, tools) that are EXPLICITLY mentioned in BOTH the Resume AND the Job Description.
+2. SOFT SKILLS MATCHED: List ONLY professional/soft skills EXPLICITLY found in the Resume.
+3. MISSING SKILLS (GAP ANALYSIS):
+   - First, list all required technical skills, software, and methods explicitly mentioned in the Job Description.
+   - Second, list all skills/software mentioned in the Resume (check all sections including Skills, Education, Technical Courses, and Work Experience).
+   - Third, identify which skills required by the Job Description are ABSENT from the Resume.
+   - DO NOT list skills that the candidate has (like SOLIDWORKS, PTC Creo Parametric, Electric Vehicles Basics, Vehicle Powertrain, etc. which are explicitly listed in their Resume) as missing skills.
+   - DO NOT list skills that are NOT mentioned in the Job Description as missing skills. The "missing_skills" list must only contain requirements from the Job Description that the candidate does not have.
+4. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Recommend how the candidate can highlight their matching skills, or address actual gaps. Do not suggest learning software they already know.
 5. NO HALLUCINATIONS: Do not assume the candidate has a skill unless it is written.
 
 Format strictly as JSON:

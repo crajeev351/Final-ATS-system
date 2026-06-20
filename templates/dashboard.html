@@ -161,9 +161,15 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center px-1">
                             <label class="text-xs font-bold uppercase tracking-widest text-slate-500">Job Description</label>
-                            <span id="char-count" class="text-[10px] font-mono text-slate-500">0 characters</span>
+                            <div class="flex items-center gap-4">
+                                <label for="jd_photo" class="cursor-pointer flex items-center gap-1.5 text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-all">
+                                    📸 Upload JD Photo
+                                    <input type="file" id="jd_photo" accept="image/*" class="hidden">
+                                </label>
+                                <span id="char-count" class="text-[10px] font-mono text-slate-500">0 characters</span>
+                            </div>
                         </div>
-                        <textarea id="job_desc" name="job_desc" required placeholder="Paste the job requirements here..."
+                        <textarea id="job_desc" name="job_desc" required placeholder="Paste the job requirements here or click 'Upload JD Photo' to extract from a photo..."
                             class="w-full bg-slate-900/30 border border-white/5 rounded-3xl px-6 py-5 text-white placeholder:text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all min-h-[200px]"
                             oninput="document.getElementById('char-count').innerText = this.value.length + ' characters'"></textarea>
                     </div>
@@ -437,6 +443,48 @@
                 }
             }
         });
+
+        // Photo OCR JD Upload Logic
+        const jdPhotoInput = document.getElementById('jd_photo');
+        const jobDescTextarea = document.getElementById('job_desc');
+        const charCount = document.getElementById('char-count');
+
+        jdPhotoInput.onchange = async function() {
+            if (jdPhotoInput.files.length === 0) return;
+            
+            const file = jdPhotoInput.files[0];
+            const formData = new FormData();
+            formData.append('jd_photo', file);
+
+            // Save original placeholder and value
+            const origValue = jobDescTextarea.value;
+            jobDescTextarea.value = "⏳ Analyzing image... Extracting Job Description details ONLY. Please wait...";
+            jobDescTextarea.disabled = true;
+
+            try {
+                const response = await fetch('/extract-jd-photo', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.text) {
+                    jobDescTextarea.value = result.text;
+                    charCount.innerText = result.text.length + ' characters';
+                } else {
+                    alert(result.error || "Failed to extract text from photo.");
+                    jobDescTextarea.value = origValue;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during photo text extraction.");
+                jobDescTextarea.value = origValue;
+            } finally {
+                jobDescTextarea.disabled = false;
+                jdPhotoInput.value = ""; // clear input
+            }
+        };
     </script>
 </body>
 </html>
