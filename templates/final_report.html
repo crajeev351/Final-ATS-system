@@ -28,10 +28,12 @@
     <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 mb-10">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <a href="/dashboard" class="text-3xl font-black tracking-tighter">ATS<span class="gradient-text">.AI</span></a>
-            <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                Dashboard
-            </a>
+            <div class="flex items-center gap-6">
+                <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Dashboard
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -85,21 +87,73 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-            <div class="glass p-8 rounded-[2.5rem]" data-aos="fade-right">
-                <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-white">🛡️ Integrity Check</h2>
-                <div class="flex items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5">
-                    <span class="text-sm font-medium text-slate-400">Cheating Risk</span>
-                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter {% if result.behavioral_analysis.cheating_risk == 'High' %}bg-red-500 text-white{% else %}bg-green-500/20 text-green-400{% endif %}">
-                        {{ result.behavioral_analysis.cheating_risk }}
-                    </span>
+            <div class="glass p-8 rounded-[2.5rem] flex flex-col justify-between" data-aos="fade-right">
+                <div>
+                    <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-white">🛡️ Integrity Check</h2>
+                    <div class="flex items-center justify-between p-4 bg-slate-900/50 rounded-2xl border border-white/5 mb-4">
+                        <span class="text-sm font-medium text-slate-400">Cheating Risk</span>
+                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter {% if result.behavioral_analysis.cheating_risk == 'High' %}bg-red-500 text-white{% else %}bg-green-500/20 text-green-400{% endif %}">
+                            {{ result.behavioral_analysis.cheating_risk }}
+                        </span>
+                    </div>
+
+                    {% if result.cheating_logs %}
+                    <div class="space-y-3 mt-4 text-xs font-light text-slate-400">
+                        <div class="flex justify-between border-b border-white/5 pb-1">
+                            <span>📱 Phone Detections:</span>
+                            <span class="font-bold {% if result.cheating_logs.phoneDetected > 0 %}text-red-400{% else %}text-slate-300{% endif %}">{{ result.cheating_logs.phoneDetected }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-white/5 pb-1">
+                            <span>📖 Reference Material:</span>
+                            <span class="font-bold {% if result.cheating_logs.bookDetected > 0 %}text-red-400{% else %}text-slate-300{% endif %}">{{ result.cheating_logs.bookDetected }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-white/5 pb-1">
+                            <span>👀 Looking Away Count:</span>
+                            <span class="font-bold {% if result.cheating_logs.lookingAway > 5 %}text-red-400{% else %}text-slate-300{% endif %}">{{ result.cheating_logs.lookingAway }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-white/5 pb-1">
+                            <span>👥 Extra People Detected:</span>
+                            <span class="font-bold {% if result.cheating_logs.extraPersons > 0 %}text-red-400{% else %}text-slate-300{% endif %}">{{ result.cheating_logs.extraPersons }}</span>
+                        </div>
+                        <div class="flex justify-between border-b border-white/5 pb-1">
+                            <span>🗣️ Reading from Script:</span>
+                            <span class="font-bold {% if result.cheating_logs.readingDetection > 0 %}text-red-400{% else %}text-slate-300{% endif %}">{{ result.cheating_logs.readingDetection }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
-            <div class="lg:col-span-2 glass p-8 rounded-[2.5rem]" data-aos="fade-left">
-                <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-white">💡 Expert Suggestions</h2>
-                <div class="flex flex-wrap gap-3">
-                    {% for sug in result.suggestions %}
-                    <span class="px-4 py-2 bg-white/5 text-slate-300 text-xs font-medium rounded-xl border border-white/5 transition-all hover:bg-white/10">{{ sug }}</span>
-                    {% endfor %}
+            
+            <div class="lg:col-span-2 glass p-8 rounded-[2.5rem] flex flex-col justify-between" data-aos="fade-left">
+                <div>
+                    <h2 class="text-lg font-bold mb-6 flex items-center gap-3 text-white">💡 Expert Suggestions & Biometrics</h2>
+                    
+                    {% if result.biometrics %}
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div class="bg-slate-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                            <span class="text-xs text-slate-500 uppercase font-black block mb-1">Stability</span>
+                            <span class="text-white font-bold">{{ result.biometrics.stability }}/10</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                            <span class="text-xs text-slate-500 uppercase font-black block mb-1">Blinks</span>
+                            <span class="text-white font-bold">{{ result.biometrics.blink_rate }}</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                            <span class="text-xs text-slate-500 uppercase font-black block mb-1">Smile</span>
+                            <span class="text-white font-bold">{{ result.biometrics.smile }}/10</span>
+                        </div>
+                        <div class="bg-slate-900/50 p-4 rounded-2xl border border-white/5 text-center">
+                            <span class="text-xs text-slate-500 uppercase font-black block mb-1">Articulation</span>
+                            <span class="text-white font-bold">{{ result.biometrics.articulation }}%</span>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex flex-wrap gap-3">
+                        {% for sug in result.suggestions %}
+                        <span class="px-4 py-2 bg-white/5 text-slate-300 text-xs font-medium rounded-xl border border-white/5 transition-all hover:bg-white/10">{{ sug }}</span>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>

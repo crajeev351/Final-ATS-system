@@ -229,6 +229,72 @@ def extract_text_from_file(filepath):
     else:
         return ""
 
+def format_indian_number(number):
+    s = str(number)
+    if len(s) <= 3:
+        return s
+    last_three = s[-3:]
+    remaining = s[:-3]
+    groups = []
+    while remaining:
+        groups.append(remaining[-2:])
+        remaining = remaining[:-2]
+    groups.reverse()
+    return ",".join(groups) + "," + last_three
+
+def generate_projected_salary(salary_before):
+    if not salary_before or salary_before == "N/A":
+        return "N/A", ""
+    
+    import re
+    numbers = re.findall(r'[\d,]+', salary_before)
+    if not numbers:
+        return "N/A", ""
+        
+    parsed_nums = []
+    is_indian_format = False
+    for num_str in numbers:
+        try:
+            if re.search(r'\d+,\d{2},\d{3}', num_str) or "₹" in salary_before:
+                is_indian_format = True
+            val = int(num_str.replace(",", ""))
+            if val > 1000:
+                parsed_nums.append(val)
+        except Exception:
+            continue
+            
+    if not parsed_nums:
+        return "N/A", ""
+        
+    scaled_nums = [int(num * 1.25) for num in parsed_nums]
+    
+    def format_num(val):
+        if is_indian_format:
+            return format_indian_number(val)
+        return f"{val:,}"
+        
+    currency = ""
+    for char in salary_before:
+        if char in ("₹", "$", "£", "€"):
+            currency = char + " "
+            break
+            
+    if len(scaled_nums) == 1:
+        after_range = f"{currency}{format_num(scaled_nums[0])}"
+    else:
+        after_range = f"{currency}{format_num(scaled_nums[0])} - {currency}{format_num(scaled_nums[1])}"
+        
+    suffix = ""
+    lower_before = salary_before.lower()
+    for s in ["per annum", "p.a.", "annually", "/yr", "yearly"]:
+        if s in lower_before:
+            suffix = " " + s
+            break
+            
+    after_range += suffix
+    reasoning = "Implementing the suggested improvements (such as adding missing skills, optimizing keywords, and clarifying work achievements) is estimated to increase your salary potential by 20% to 30%."
+    return after_range, reasoning
+
 # DEFAULT PAGE → SIGNUP
 @app.route('/', methods=['GET', 'POST'])
 def signup():
@@ -417,8 +483,12 @@ CRITICAL PRECISION RULES FOR SKILL MATCHING AND GAP ANALYSIS:
    - Third, identify which skills required by the Job Description are ABSENT from the Resume.
    - DO NOT list skills that the candidate has (like SOLIDWORKS, PTC Creo Parametric, Electric Vehicles Basics, Vehicle Powertrain, etc. which are explicitly listed in their Resume) as missing skills.
    - DO NOT list skills that are NOT mentioned in the Job Description as missing skills. The "missing_skills" list must only contain requirements from the Job Description that the candidate does not have.
-4. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Recommend how the candidate can highlight their matching skills, or address actual gaps. Do not suggest learning software they already know.
-5. NO HALLUCINATIONS: Do not assume the candidate has a skill unless it is written.
+4. SALARY ESTIMATION: Predict two highly realistic, believable, and precise annual salary ranges (using local currency standard based on candidate location or job description e.g., INR for India, USD for USA):
+   - BEFORE ENHANCEMENT (based on the current resume matching the job description with its existing skill gaps).
+   - AFTER ENHANCEMENT (based on the potential salary if the candidate implements all the strategic advice and successfully adds all the missing skills to their resume/profile).
+   - Provide a precise explanation for both estimates.
+5. STRATEGIC ADVICE: Provide 3-5 highly specific, actionable suggestions. Recommend how the candidate can highlight their matching skills, or address actual gaps. Do not suggest learning software they already know.
+6. NO HALLUCINATIONS: Do not assume the candidate has a skill unless it is written.
 
 Format strictly as JSON:
 {{
@@ -426,6 +496,10 @@ Format strictly as JSON:
   "technical_skills_matched": ["skill", "skill"],
   "soft_skills_matched": ["skill", "skill"],
   "missing_skills": ["skill", "skill"],
+  "salary_range_before": "<estimated range e.g., $65,000 - $75,000 or INR equivalent>",
+  "salary_reasoning_before": "<1-2 sentences precise reasoning>",
+  "salary_range_after": "<estimated range e.g., $85,000 - $100,000 or INR equivalent>",
+  "salary_reasoning_after": "<1-2 sentences precise reasoning>",
   "strategic_advice": ["suggestion 1", "suggestion 2"]
 }}
 
@@ -452,6 +526,18 @@ Job Description:
                 missing = data.get("missing_skills", [])
                 suggestions = data.get("strategic_advice", [])
                 
+                salary_range_before = data.get("salary_range_before", data.get("salary_range", "N/A"))
+                salary_reasoning_before = data.get("salary_reasoning_before", data.get("salary_reasoning", ""))
+                salary_range_after = data.get("salary_range_after", "N/A")
+                salary_reasoning_after = data.get("salary_reasoning_after", "")
+                
+                # Dynamic fallback for missing "after enhancement" values
+                if (salary_range_after == "N/A" or not salary_range_after) and salary_range_before != "N/A":
+                    proj_sal, proj_reason = generate_projected_salary(salary_range_before)
+                    if proj_sal != "N/A":
+                        salary_range_after = proj_sal
+                        salary_reasoning_after = proj_reason
+                
                 # Format suggestions (Bold to strong)
                 suggestions = [re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', str(sug)) for sug in suggestions]
 
@@ -462,8 +548,13 @@ Job Description:
                 matched_soft = []
                 missing = []
                 suggestions = ["AI Error: Failed to parse evaluation data. Please try again."]
+                salary_range_before = "N/A"
+                salary_reasoning_before = "Failed to parse salary data."
+                salary_range_after = "N/A"
+                salary_reasoning_after = ""
 
             # Save to history
+            analysis_id = 0
             try:
                 full_data_dict = {
                     "score": score,
@@ -472,7 +563,11 @@ Job Description:
                     "missing": missing,
                     "suggestions": suggestions,
                     "resume_text": resume_text,
-                    "job_desc": job_desc
+                    "job_desc": job_desc,
+                    "salary_range_before": salary_range_before,
+                    "salary_reasoning_before": salary_reasoning_before,
+                    "salary_range_after": salary_range_after,
+                    "salary_reasoning_after": salary_reasoning_after
                 }
                 full_data_json = json.dumps(full_data_dict)
 
@@ -483,6 +578,12 @@ Job Description:
                     (session['user'], score, "\n".join(matched_tech + matched_soft), "\n".join(missing), "\n".join(suggestions), full_data_json)
                 )
                 conn.commit()
+                
+                # Fetch last ID
+                cursor.execute("SELECT id FROM resume_evaluations WHERE username=? ORDER BY id DESC LIMIT 1", (session['user'],))
+                row = cursor.fetchone()
+                if row:
+                    analysis_id = row['id']
                 conn.close()
             except Exception as db_err:
                 print(f"Database error: {db_err}")
@@ -495,7 +596,12 @@ Job Description:
                 missing=missing,
                 suggestions=suggestions,
                 resume_text=resume_text,
-                job_desc=job_desc
+                job_desc=job_desc,
+                salary_range_before=salary_range_before,
+                salary_reasoning_before=salary_reasoning_before,
+                salary_range_after=salary_range_after,
+                salary_reasoning_after=salary_reasoning_after,
+                analysis_id=analysis_id
             )
 
         except Exception as e:
@@ -815,6 +921,22 @@ Q&A:
             if result_data.get("behavioral_analysis", {}).get("cheating_risk") == "High":
                 result_data["behavioral_analysis"]["cheating_risk"] = "Low"
 
+        # Inject biometrics and cheating telemetry for visual dashboards
+        result_data["cheating_logs"] = {
+            "noFace": no_face,
+            "lookingAway": looking_away,
+            "readingDetection": reading,
+            "phoneDetected": phone,
+            "bookDetected": book,
+            "extraPersons": extra_people
+        }
+        result_data["biometrics"] = {
+            "stability": stability,
+            "blink_rate": blink_rate,
+            "smile": smile,
+            "articulation": articulation
+        }
+
     except Exception as e:
         print(f"Final evaluation parse error: {e}")
         # Use a fail-safe but realistic score for failed answers
@@ -827,7 +949,21 @@ Q&A:
                 "cheating_risk": "Low"
             },
             "qa_analysis": [{"question": questions_list[i] if i < len(questions_list) else f"Q{i+1}", "answer": ans, "score": 1} for i, ans in enumerate(answers)],
-            "suggestions": ["Improve technical knowledge.", "Provide detailed answers."]
+            "suggestions": ["Improve technical knowledge.", "Provide detailed answers."],
+            "cheating_logs": {
+                "noFace": no_face,
+                "lookingAway": looking_away,
+                "readingDetection": reading,
+                "phoneDetected": phone,
+                "bookDetected": book,
+                "extraPersons": extra_people
+            },
+            "biometrics": {
+                "stability": stability,
+                "blink_rate": blink_rate,
+                "smile": smile,
+                "articulation": articulation
+            }
         }
 
     return result_data
@@ -1229,6 +1365,18 @@ def view_analysis(analysis_id):
 
         if row and row['full_data']:
             data = json.loads(row['full_data'])
+            salary_range_before = data.get("salary_range_before", data.get("salary_range", "N/A"))
+            salary_reasoning_before = data.get("salary_reasoning_before", data.get("salary_reasoning", ""))
+            salary_range_after = data.get("salary_range_after", "N/A")
+            salary_reasoning_after = data.get("salary_reasoning_after", "")
+            
+            # Dynamic fallback for missing "after enhancement" values in legacy history records
+            if (salary_range_after == "N/A" or not salary_range_after) and salary_range_before != "N/A":
+                proj_sal, proj_reason = generate_projected_salary(salary_range_before)
+                if proj_sal != "N/A":
+                    salary_range_after = proj_sal
+                    salary_reasoning_after = proj_reason
+            
             return render_template(
                 "result.html",
                 score=data['score'],
@@ -1237,7 +1385,12 @@ def view_analysis(analysis_id):
                 missing=data['missing'],
                 suggestions=data['suggestions'],
                 resume_text=data.get('resume_text', ''),
-                job_desc=data.get('job_desc', '')
+                job_desc=data.get('job_desc', ''),
+                salary_range_before=salary_range_before,
+                salary_reasoning_before=salary_reasoning_before,
+                salary_range_after=salary_range_after,
+                salary_reasoning_after=salary_reasoning_after,
+                analysis_id=analysis_id
             )
         else:
             return "Analysis not found or data missing."
@@ -1343,6 +1496,126 @@ def delete_interview(interview_id):
         print(f"Delete Error: {e}")
 
     return redirect(url_for('dashboard'))
+
+
+@app.route('/scrape-jd', methods=['POST'])
+def scrape_jd():
+    if "user" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    data = request.get_json()
+    url = data.get("url")
+    if not url:
+        return {"error": "No URL provided"}, 400
+
+    try:
+        import urllib.request
+        import re
+        req = urllib.request.Request(
+            url,
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=15) as response:
+            html = response.read().decode('utf-8', errors='ignore')
+
+        # Strip HTML tags
+        text = re.sub(r'<script.*?</script>', '', html, flags=re.DOTALL)
+        text = re.sub(r'<style.*?</style>', '', text, flags=re.DOTALL)
+        text = re.sub(r'<.*?>', ' ', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+
+        # Extract JD using OpenRouter
+        prompt = f"""
+You are an expert Job Description Extractor.
+From the following raw scraped website text, identify and extract the Job Description itself.
+Extract ONLY details related to the job (e.g., Job Title, Location, Roles & Responsibilities, Required Skills, Education/Experience Qualifications).
+Do NOT include any unrelated website text, advertisements, cookie notices, headers, footers, or application buttons.
+Strictly return ONLY the extracted Job Description text. Do not write any introduction or explanation before or after the extracted text.
+
+Scraped Website Text:
+{text[:8000]}
+"""
+        extracted_jd = get_ai_completion(prompt)
+        if not extracted_jd:
+            return {"error": "Failed to extract job description from URL."}, 500
+
+        return {"text": extracted_jd.strip()}
+    except Exception as e:
+        print(f"Scrape Error: {e}")
+        return {"error": f"Failed to fetch or parse URL: {e}"}, 500
+
+
+@app.route('/generate-documents/<int:analysis_id>', methods=['GET'])
+def generate_documents(analysis_id):
+    if "user" not in session:
+        return {"error": "Unauthorized"}, 401
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT full_data FROM resume_evaluations WHERE id=? AND username=?", (analysis_id, session['user']))
+        row = cursor.fetchone()
+        conn.close()
+
+        if not row or not row['full_data']:
+            return {"error": "Analysis record not found"}, 404
+
+        eval_data = json.loads(row['full_data'])
+        resume_text = eval_data.get("resume_text", "")
+        job_desc = eval_data.get("job_desc", "")
+
+        prompt = f"""
+You are an expert Career Advisor and Professional Copywriter.
+Write two documents based on the provided Resume and Job Description:
+1. A highly tailored, compelling Cover Letter (around 250-350 words).
+2. A professional, high-conversion LinkedIn Outreach/Cold Email (around 100-150 words) to send to the hiring manager.
+
+Ensure both documents are specific, highlight the matching technical skills, and address the job requirements.
+
+Format the output strictly using these exact delimiters so we can parse it reliably:
+===COVER-LETTER===
+[Insert Cover Letter content here]
+===COLD-EMAIL===
+[Insert Cold Outreach/LinkedIn message content here]
+
+Resume:
+{resume_text[:3000]}
+
+Job Description:
+{job_desc[:2000]}
+"""
+        raw_output = get_ai_completion(prompt).strip()
+
+        import re
+        cl_match = re.search(r'===COVER-LETTER===\s*(.*?)\s*(===COLD-EMAIL===|$)', raw_output, re.DOTALL)
+        email_match = re.search(r'===COLD-EMAIL===\s*(.*)', raw_output, re.DOTALL)
+
+        cl_part = cl_match.group(1).strip() if cl_match else ""
+        email_part = email_match.group(1).strip() if email_match else ""
+
+        # If delimiters failed, fallback to JSON parsing
+        if not cl_part and not email_part:
+            try:
+                match = re.search(r'\{.*\}', raw_output, re.DOTALL)
+                if match:
+                    data = json.loads(match.group(0), strict=False)
+                    cl_part = data.get("cover_letter", "")
+                    email_part = data.get("cold_email", "")
+            except Exception as pe:
+                print("JSON fallback parsing error:", pe)
+
+        # If still empty, return raw output as cover letter
+        if not cl_part:
+            cl_part = raw_output
+
+        return {"cover_letter": cl_part, "cold_email": email_part}
+    except Exception as e:
+        print(f"Docs Generation Error: {e}")
+        return {"error": f"Failed to generate documents: {e}"}, 500
+
+
+
+
 
 
 if __name__ == '__main__':

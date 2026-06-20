@@ -162,6 +162,9 @@
                         <div class="flex justify-between items-center px-1">
                             <label class="text-xs font-bold uppercase tracking-widest text-slate-500">Job Description</label>
                             <div class="flex items-center gap-4">
+                                <button type="button" onclick="scrapeJobDescription()" class="flex items-center gap-1.5 text-[10px] font-black text-purple-400 hover:text-purple-300 uppercase tracking-widest transition-all">
+                                    🔗 Scrape URL
+                                </button>
                                 <label for="jd_photo" class="cursor-pointer flex items-center gap-1.5 text-[10px] font-black text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-all">
                                     📸 Upload JD Photo
                                     <input type="file" id="jd_photo" accept="image/*" class="hidden">
@@ -291,6 +294,26 @@
                         <p class="text-slate-600 text-sm italic">No interview records yet.</p>
                     </div>
                     {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Scrape URL Modal -->
+        <div id="scrape-modal" class="fixed inset-0 z-[110] flex items-center justify-center hidden bg-slate-950/80 backdrop-blur-md">
+            <div class="glass p-8 rounded-[2rem] w-full max-w-md shadow-2xl border border-white/10 space-y-6">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span>🔗</span> Scrape Job Post URL
+                </h3>
+                <p class="text-xs text-slate-400">Enter the URL of the job description (LinkedIn, Indeed, etc.) to extract details.</p>
+                <input type="url" id="scrape-url-input" placeholder="https://www.linkedin.com/jobs/view/..."
+                    class="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all">
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeScrapeModal()" class="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-slate-400 font-bold rounded-xl border border-white/5 text-xs uppercase tracking-wider transition-all">
+                        Cancel
+                    </button>
+                    <button type="button" onclick="submitScrapeUrl()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-black rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-indigo-500/20 transition-all">
+                        Scrape URL
+                    </button>
                 </div>
             </div>
         </div>
@@ -485,6 +508,50 @@
                 jdPhotoInput.value = ""; // clear input
             }
         };
+
+        function scrapeJobDescription() {
+            document.getElementById('scrape-modal').classList.remove('hidden');
+            document.getElementById('scrape-url-input').focus();
+        }
+
+        function closeScrapeModal() {
+            document.getElementById('scrape-modal').classList.add('hidden');
+            document.getElementById('scrape-url-input').value = "";
+        }
+
+        async function submitScrapeUrl() {
+            const urlInput = document.getElementById('scrape-url-input');
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            closeScrapeModal();
+
+            const origValue = jobDescTextarea.value;
+            jobDescTextarea.value = "⏳ Scraping job details from URL... Please wait...";
+            jobDescTextarea.disabled = true;
+
+            try {
+                const response = await fetch('/scrape-jd', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                const result = await response.json();
+                if (response.ok && result.text) {
+                    jobDescTextarea.value = result.text;
+                    charCount.innerText = result.text.length + ' characters';
+                } else {
+                    alert(result.error || "Failed to scrape job description.");
+                    jobDescTextarea.value = origValue;
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred while scraping the URL.");
+                jobDescTextarea.value = origValue;
+            } finally {
+                jobDescTextarea.disabled = false;
+            }
+        }
     </script>
 </body>
 </html>

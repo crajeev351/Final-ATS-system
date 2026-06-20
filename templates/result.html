@@ -38,10 +38,12 @@
     <nav class="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 mb-10">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <a href="/dashboard" class="text-3xl font-black tracking-tighter">ATS<span class="gradient-text">.AI</span></a>
-            <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
-                Dashboard
-            </a>
+            <div class="flex items-center gap-6">
+                <a href="/dashboard" class="text-sm font-bold text-slate-400 hover:text-white transition-all flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    Dashboard
+                </a>
+            </div>
         </div>
     </nav>
 
@@ -108,6 +110,83 @@
             </h2>
             <div id="suggestions-list" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                 <!-- Suggestions will be typed here -->
+            </div>
+        </div>
+
+        <!-- AI Salary Estimator & Cover Letter Generator -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Salary Estimator Card -->
+            <div class="glass p-10 rounded-[3rem] tilt-card flex flex-col justify-between" data-aos="fade-right">
+                <div>
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-400 border border-indigo-500/20 text-center flex-col justify-center">
+                            <span class="text-lg">💰</span>
+                        </div>
+                        <h2 class="text-2xl font-bold tracking-tight text-white">Salary Estimator</h2>
+                    </div>
+                    
+                    <!-- Before Enhancement Section -->
+                    <div class="mb-6 p-4 rounded-2xl bg-red-500/5 border border-red-500/10">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="px-2 py-0.5 bg-red-500/10 text-red-400 text-[8px] font-black uppercase rounded tracking-widest">Before Enhancement</span>
+                        </div>
+                        <p class="text-2xl font-black text-slate-300 leading-none mb-2">{{ salary_range_before }}</p>
+                        <p class="text-xs font-light text-slate-400 leading-relaxed">{{ salary_reasoning_before }}</p>
+                    </div>
+
+                    <!-- After Enhancement Section -->
+                    <div class="p-4 rounded-2xl bg-green-500/5 border border-green-500/10">
+                        <div class="flex items-center gap-2 mb-1.5">
+                            <span class="px-2 py-0.5 bg-green-500/10 text-green-400 text-[8px] font-black uppercase rounded tracking-widest">After Enhancement</span>
+                        </div>
+                        <p class="text-2xl font-black text-green-400 leading-none mb-2">{{ salary_range_after }}</p>
+                        <p class="text-xs font-light text-slate-400 leading-relaxed">{{ salary_reasoning_after }}</p>
+                    </div>
+                </div>
+                <div class="mt-8 text-[9px] font-mono text-slate-600 uppercase tracking-widest text-center">
+                    Based on resume skills & job market trends
+                </div>
+            </div>
+
+            <!-- Documents Generator Card -->
+            <div class="lg:col-span-2 glass p-10 rounded-[3rem] flex flex-col justify-between" data-aos="fade-left">
+                <div>
+                    <div class="flex items-center justify-between gap-4 mb-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-400 border border-purple-500/20 text-center flex-col justify-center">
+                                <span class="text-lg">📄</span>
+                            </div>
+                            <h2 class="text-2xl font-bold tracking-tight text-white">Application Documents</h2>
+                        </div>
+                        <button onclick="generateDocs()" id="docs-btn" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-black rounded-xl shadow-lg transition-all uppercase tracking-wider">
+                            ⚡ Generate Docs
+                        </button>
+                    </div>
+
+                    <!-- Tabs/View -->
+                    <div id="docs-display" class="hidden space-y-6">
+                        <div class="flex gap-4 border-b border-white/5 pb-2">
+                            <button id="tab-cl-btn" onclick="switchDocTab('cl')" class="text-xs font-black uppercase tracking-wider text-indigo-400 border-b-2 border-indigo-500 pb-1">Cover Letter</button>
+                            <button id="tab-email-btn" onclick="switchDocTab('email')" class="text-xs font-black uppercase tracking-wider text-slate-500 pb-1">Cold Outreach</button>
+                        </div>
+                        
+                        <!-- Cover Letter Tab -->
+                        <div id="tab-cl-content" class="relative group">
+                            <textarea id="cl-textarea" readonly class="w-full bg-slate-900/30 border border-white/5 rounded-2xl p-5 text-slate-300 text-xs font-mono min-h-[220px] focus:outline-none focus:ring-1 focus:ring-purple-500/50"></textarea>
+                            <button onclick="copyToClipboard('cl-textarea')" class="absolute top-3 right-3 text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-wider bg-slate-950/80 px-3 py-1.5 rounded-lg border border-white/5">📋 Copy</button>
+                        </div>
+
+                        <!-- Outreach Tab -->
+                        <div id="tab-email-content" class="hidden relative group">
+                            <textarea id="email-textarea" readonly class="w-full bg-slate-900/30 border border-white/5 rounded-2xl p-5 text-slate-300 text-xs font-mono min-h-[220px] focus:outline-none focus:ring-1 focus:ring-purple-500/50"></textarea>
+                            <button onclick="copyToClipboard('email-textarea')" class="absolute top-3 right-3 text-[10px] font-bold text-slate-500 hover:text-white uppercase tracking-wider bg-slate-950/80 px-3 py-1.5 rounded-lg border border-white/5">📋 Copy</button>
+                        </div>
+                    </div>
+                    
+                    <div id="docs-placeholder" class="py-16 text-center text-slate-500 italic text-sm border-dashed border border-white/5 rounded-3xl">
+                        Click 'Generate Docs' to draft a tailored Cover Letter and LinkedIn Cold Outreach message using AI.
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -292,6 +371,75 @@
                     }
                 }
             }
+        }
+
+        async function generateDocs() {
+            const btn = document.getElementById('docs-btn');
+            const display = document.getElementById('docs-display');
+            const placeholder = document.getElementById('docs-placeholder');
+            const clTextarea = document.getElementById('cl-textarea');
+            const emailTextarea = document.getElementById('email-textarea');
+            
+            btn.disabled = true;
+            btn.innerText = "⏳ Generating...";
+            placeholder.innerText = "⏳ Drafting cover letter and cold outreach messaging utilizing AI. Please hold...";
+            
+            try {
+                const response = await fetch('/generate-documents/{{ analysis_id }}');
+                const data = await response.json();
+                
+                if (response.ok && data.cover_letter && data.cold_email) {
+                    clTextarea.value = data.cover_letter;
+                    emailTextarea.value = data.cold_email;
+                    
+                    placeholder.classList.add('hidden');
+                    display.classList.remove('hidden');
+                    btn.innerText = "✅ Generated";
+                } else {
+                    alert(data.error || "Failed to generate documents.");
+                    btn.disabled = false;
+                    btn.innerText = "⚡ Generate Docs";
+                    placeholder.innerText = "Click 'Generate Docs' to draft a tailored Cover Letter and LinkedIn Cold Outreach message using AI.";
+                }
+            } catch (err) {
+                console.error(err);
+                alert("An error occurred during document generation.");
+                btn.disabled = false;
+                btn.innerText = "⚡ Generate Docs";
+                placeholder.innerText = "Click 'Generate Docs' to draft a tailored Cover Letter and LinkedIn Cold Outreach message using AI.";
+            }
+        }
+
+        function switchDocTab(tab) {
+            const clTab = document.getElementById('tab-cl-btn');
+            const emailTab = document.getElementById('tab-email-btn');
+            const clContent = document.getElementById('tab-cl-content');
+            const emailContent = document.getElementById('tab-email-content');
+            
+            if (tab === 'cl') {
+                clTab.classList.add('text-indigo-400', 'border-b-2', 'border-indigo-500');
+                clTab.classList.remove('text-slate-500');
+                emailTab.classList.remove('text-indigo-400', 'border-b-2', 'border-indigo-500');
+                emailTab.classList.add('text-slate-500');
+                
+                clContent.classList.remove('hidden');
+                emailContent.classList.add('hidden');
+            } else {
+                emailTab.classList.add('text-indigo-400', 'border-b-2', 'border-indigo-500');
+                emailTab.classList.remove('text-slate-500');
+                clTab.classList.remove('text-indigo-400', 'border-b-2', 'border-indigo-500');
+                clTab.classList.add('text-slate-500');
+                
+                emailContent.classList.remove('hidden');
+                clContent.classList.add('hidden');
+            }
+        }
+
+        function copyToClipboard(id) {
+            const textarea = document.getElementById(id);
+            textarea.select();
+            document.execCommand('copy');
+            alert('Copied to clipboard!');
         }
     </script>
 </body>
