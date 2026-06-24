@@ -1031,7 +1031,7 @@ def download_report():
         # Header branding
         pdf.set_font("Arial", 'B', 16)
         pdf.set_text_color(*c_indigo)
-        pdf.cell(50, 10, "ATS.AI", ln=False)
+        pdf.cell(50, 10, "PrepMate AI", ln=False)
         
         pdf.set_font("Arial", '', 10)
         pdf.set_text_color(*c_text_gray)
