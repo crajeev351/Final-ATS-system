@@ -47,13 +47,58 @@
                 Initialising AI interviewer environment...
             </div>
 
-            <div class="relative flex justify-center mb-10">
-                <div class="relative rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl bg-black aspect-video w-full max-w-[540px]">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-10 w-full">
+                <!-- Video Container -->
+                <div class="relative rounded-3xl overflow-hidden border-4 border-white/5 shadow-2xl bg-black aspect-video w-full max-w-[540px] flex-shrink-0">
                     <video id="video" autoplay muted class="w-full h-full object-cover grayscale-[0.2] contrast-[1.1]"></video>
-                    <div id="face-status" class="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-1.5 glass rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
+                    
+                    <div id="face-status" class="absolute top-4 right-4 px-4 py-1.5 glass rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10 z-20">
                         Checking Hardware...
                     </div>
-                    <div id="speaking-indicator" class="absolute bottom-6 right-6 w-5 h-5 bg-green-500 rounded-full hidden"></div>
+
+                    <!-- Dynamic Warning Banner Overlay -->
+                    <div id="warning-banner" class="hidden absolute bottom-4 left-4 right-4 px-4 py-2.5 bg-red-600/90 text-white text-xs font-black uppercase tracking-wider rounded-xl text-center animate-pulse shadow-lg backdrop-blur-md z-20 border border-red-500/30">
+                        WARNING: Violation Detected
+                    </div>
+
+                    <div id="speaking-indicator" class="absolute bottom-6 right-6 w-5 h-5 bg-green-500 rounded-full hidden z-20"></div>
+                </div>
+
+                <!-- Integrity Telemetry Dashboard (Side-by-side with video) -->
+                <div id="integrity-dashboard" class="glass p-5 rounded-3xl border border-white/10 text-[10px] font-semibold tracking-wide text-slate-300 hidden flex-col gap-3 select-none w-full md:w-52 shadow-2xl backdrop-blur-xl bg-slate-950/75 self-stretch justify-center">
+                    <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-1">
+                        <span class="font-black text-indigo-400 uppercase tracking-wider text-[9px]">INTEGRITY MONITOR</span>
+                        <span class="flex items-center gap-1 text-[7px] text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded-full border border-green-500/20 animate-pulse font-black">
+                            <span class="w-1 h-1 rounded-full bg-green-400"></span> LIVE
+                        </span>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <!-- Phone -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">📱 PHONE</span>
+                            <span id="count-phone-badge" class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono font-bold text-[9px] transition-all duration-300">0/2</span>
+                        </div>
+                        <!-- Book -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">📚 BOOK</span>
+                            <span id="count-book-badge" class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono font-bold text-[9px] transition-all duration-300">0/2</span>
+                        </div>
+                        <!-- People -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">👥 PEOPLE</span>
+                            <span id="count-people-badge" class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono font-bold text-[9px] transition-all duration-300">0/2</span>
+                        </div>
+                        <!-- Gaze -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">👀 GAZE</span>
+                            <span id="count-gaze-badge" class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono font-bold text-[9px] transition-all duration-300">0/10</span>
+                        </div>
+                        <!-- No Face -->
+                        <div class="flex items-center justify-between">
+                            <span class="text-slate-400">❌ NO FACE</span>
+                            <span id="count-noface-badge" class="px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20 text-green-400 font-mono font-bold text-[9px] transition-all duration-300">0</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -90,14 +135,17 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
 
     <script>
-        // Core Logic (Remains identical but UI elements are updated)
         let questions = [];
         let currentQuestionIndex = 0;
         let voices = [];
         let allAnswers = [];
         let faceScore = { stability: 0, frames: 0, mouthOpening: 0, smileScore: 0, blinkCount: 0 };
-        let cheatingFlags = { noFace: 0, phoneDetected: 0, extraPersons: 0 };
+        let cheatingFlags = { noFace: 0, phoneDetected: 0, bookDetected: 0, extraPersons: 0, lookingAway: 0, readingDetection: 0 };
         let objectDetector;
+        
+        let activeFrameHasFace = false;
+        let activeFrameLookingAway = false;
+        let interviewStarted = false;
 
         cocoSsd.load().then(model => { objectDetector = model; });
 
@@ -108,6 +156,9 @@
 
         function beginInterview() {
             document.getElementById("start-overlay").classList.add('hidden');
+            document.getElementById("integrity-dashboard").classList.remove('hidden');
+            document.getElementById("integrity-dashboard").classList.add('flex');
+            interviewStarted = true;
             if (questions.length > 0) {
                 document.getElementById("question").innerText = questions[0];
                 speak(questions[0]);
@@ -122,14 +173,166 @@
 
         faceMesh.onResults(results => {
             const statusEl = document.getElementById("face-status");
+
             if (!results.multiFaceLandmarks || results.multiFaceLandmarks.length === 0) {
-                statusEl.innerText = "No Face Detected"; statusEl.classList.add('text-red-500'); cheatingFlags.noFace++;
+                statusEl.innerText = "No Face Detected";
+                statusEl.classList.remove('text-green-400');
+                statusEl.classList.add('text-red-500');
+                activeFrameHasFace = false;
+                activeFrameLookingAway = false;
             } else {
-                statusEl.innerText = "Assessment Active"; statusEl.classList.remove('text-red-500'); statusEl.classList.add('text-green-400');
+                statusEl.innerText = "Assessment Active";
+                statusEl.classList.remove('text-red-500');
+                statusEl.classList.add('text-green-400');
                 faceScore.frames++;
+                activeFrameHasFace = true;
+
+                // Track gaze & eyeball direction
+                const landmarks = results.multiFaceLandmarks[0];
+                const leftIris = landmarks[468];
+                const leftInner = landmarks[133];
+                const leftOuter = landmarks[33];
+                const rightIris = landmarks[473];
+                const rightInner = landmarks[362];
+                const rightOuter = landmarks[263];
+
+                if (leftIris && leftInner && leftOuter && rightIris && rightInner && rightOuter) {
+                    const leftEyeWidth = Math.abs(leftInner.x - leftOuter.x);
+                    const rightEyeWidth = Math.abs(rightInner.x - rightOuter.x);
+                    
+                    const leftRatio = (leftIris.x - Math.min(leftInner.x, leftOuter.x)) / leftEyeWidth;
+                    const rightRatio = (rightIris.x - Math.min(rightInner.x, rightOuter.x)) / rightEyeWidth;
+                    
+                    // Ratio deviations indicate looking to left or right sides (relaxed thresholds)
+                    const lookingLeft = (leftRatio < 0.22 || rightRatio < 0.22);
+                    const lookingRight = (leftRatio > 0.78 || rightRatio > 0.78);
+                    
+                    // Vertical gaze deviation (looking down/up) using bony inner eye corners (133/362) (relaxed thresholds)
+                    const leftVerticalDiff = (leftIris.y - leftInner.y) / leftEyeWidth;
+                    const rightVerticalDiff = (rightIris.y - rightInner.y) / rightEyeWidth;
+                    const lookingDown = (leftVerticalDiff > 0.25 || rightVerticalDiff > 0.25);
+                    const lookingUp = (leftVerticalDiff < -0.20 || rightVerticalDiff < -0.20);
+
+                    // Head turn pose (Yaw) checking relative position of nose tip (relaxed thresholds)
+                    const nose = landmarks[4];
+                    const leftCheek = landmarks[234];
+                    const rightCheek = landmarks[454];
+                    const faceWidth = Math.abs(leftCheek.x - rightCheek.x);
+                    const noseRatio = (nose.x - Math.min(leftCheek.x, rightCheek.x)) / faceWidth;
+                    const headTurnedHorizontal = (noseRatio < 0.26 || noseRatio > 0.74);
+
+                    // Head tilt pose (Pitch) checking forehead-to-nose vs nose-to-chin ratio (relaxed thresholds)
+                    const forehead = landmarks[10];
+                    const chin = landmarks[152];
+                    const foreheadNoseDist = nose.y - forehead.y;
+                    const noseChinDist = chin.y - nose.y;
+                    const headPitchRatio = foreheadNoseDist / noseChinDist;
+                    const headTurnedVertical = (headPitchRatio > 1.80 || headPitchRatio < 0.55);
+
+                    activeFrameLookingAway = (lookingLeft || lookingRight || lookingDown || lookingUp || headTurnedHorizontal || headTurnedVertical);
+                } else {
+                    activeFrameLookingAway = false;
+                }
             }
         });
         new Camera(videoElement, { onFrame: async () => { await faceMesh.send({ image: videoElement }); }, width: 640, height: 480 }).start();
+
+        function updateTelemetryUI() {
+            const updateBadge = (id, current, max) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                
+                el.innerText = max ? `${current}/${max}` : current;
+                el.className = "px-1.5 py-0.5 rounded font-mono font-bold text-[9px] transition-all duration-300";
+                
+                if (max) {
+                    if (current >= max) {
+                        el.classList.add('bg-red-500/20', 'border', 'border-red-500/30', 'text-red-400');
+                    } else if (current > 0) {
+                        el.classList.add('bg-yellow-500/20', 'border', 'border-yellow-500/30', 'text-yellow-400');
+                    } else {
+                        el.classList.add('bg-green-500/10', 'border', 'border-green-500/20', 'text-green-400');
+                    }
+                } else {
+                    if (current > 0) {
+                        el.classList.add('bg-yellow-500/20', 'border', 'border-yellow-500/30', 'text-yellow-400');
+                    } else {
+                        el.classList.add('bg-green-500/10', 'border', 'border-green-500/20', 'text-green-400');
+                    }
+                }
+            };
+
+            updateBadge("count-phone-badge", cheatingFlags.phoneDetected, 2);
+            updateBadge("count-book-badge", cheatingFlags.bookDetected, 2);
+            updateBadge("count-people-badge", cheatingFlags.extraPersons, 2);
+            updateBadge("count-gaze-badge", cheatingFlags.lookingAway, 10);
+            updateBadge("count-noface-badge", cheatingFlags.noFace, null);
+        }
+
+        // 1-second interval loop for object detection & status accumulation (so frames aren't counted 30 times a second)
+        setInterval(async () => {
+            // Only track violations when interview has actually started
+            if (!interviewStarted) return;
+            if (!videoElement || videoElement.paused || videoElement.ended) return;
+
+            let alerts = [];
+
+            // 1. Process Face Mesh Telemetry
+            if (!activeFrameHasFace) {
+                cheatingFlags.noFace++;
+                alerts.push("No Face");
+            } else if (activeFrameLookingAway) {
+                cheatingFlags.lookingAway++;
+                alerts.push("Looking Away");
+            }
+
+            // 2. Process Object Detection Telemetry
+            if (objectDetector) {
+                try {
+                    const predictions = await objectDetector.detect(videoElement);
+                    let phoneDetectedThisFrame = false;
+                    let bookDetectedThisFrame = false;
+                    let personCount = 0;
+
+                    predictions.forEach(prediction => {
+                        if (prediction.class === 'cell phone' && prediction.score > 0.45) {
+                            phoneDetectedThisFrame = true;
+                        } else if (prediction.class === 'book' && prediction.score > 0.45) {
+                            bookDetectedThisFrame = true;
+                        } else if (prediction.class === 'person' && prediction.score > 0.45) {
+                            personCount++;
+                        }
+                    });
+
+                    if (phoneDetectedThisFrame) {
+                        cheatingFlags.phoneDetected++;
+                        alerts.push("Phone");
+                    }
+                    if (bookDetectedThisFrame) {
+                        cheatingFlags.bookDetected++;
+                        alerts.push("Book");
+                    }
+                    if (personCount > 1) {
+                        cheatingFlags.extraPersons++;
+                        alerts.push("Multiple People");
+                    }
+                } catch (err) {
+                    console.error("Object detection error:", err);
+                }
+            }
+
+            // 3. Update Telemetry UI
+            updateTelemetryUI();
+
+            // 4. Update Warning Alert UI Overlay
+            const warningBanner = document.getElementById("warning-banner");
+            if (alerts.length > 0) {
+                warningBanner.innerText = `⚠️ WARNING: ${alerts.join(" | ")} Detected`;
+                warningBanner.classList.remove('hidden');
+            } else {
+                warningBanner.classList.add('hidden');
+            }
+        }, 1000);
 
         function speak(text) {
             window.speechSynthesis.cancel();
