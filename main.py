@@ -1498,51 +1498,7 @@ def delete_interview(interview_id):
     return redirect(url_for('dashboard'))
 
 
-@app.route('/scrape-jd', methods=['POST'])
-def scrape_jd():
-    if "user" not in session:
-        return {"error": "Unauthorized"}, 401
 
-    data = request.get_json()
-    url = data.get("url")
-    if not url:
-        return {"error": "No URL provided"}, 400
-
-    try:
-        import urllib.request
-        import re
-        req = urllib.request.Request(
-            url,
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        )
-        with urllib.request.urlopen(req, timeout=15) as response:
-            html = response.read().decode('utf-8', errors='ignore')
-
-        # Strip HTML tags
-        text = re.sub(r'<script.*?</script>', '', html, flags=re.DOTALL)
-        text = re.sub(r'<style.*?</style>', '', text, flags=re.DOTALL)
-        text = re.sub(r'<.*?>', ' ', text)
-        text = re.sub(r'\s+', ' ', text).strip()
-
-        # Extract JD using OpenRouter
-        prompt = f"""
-You are an expert Job Description Extractor.
-From the following raw scraped website text, identify and extract the Job Description itself.
-Extract ONLY details related to the job (e.g., Job Title, Location, Roles & Responsibilities, Required Skills, Education/Experience Qualifications).
-Do NOT include any unrelated website text, advertisements, cookie notices, headers, footers, or application buttons.
-Strictly return ONLY the extracted Job Description text. Do not write any introduction or explanation before or after the extracted text.
-
-Scraped Website Text:
-{text[:8000]}
-"""
-        extracted_jd = get_ai_completion(prompt)
-        if not extracted_jd:
-            return {"error": "Failed to extract job description from URL."}, 500
-
-        return {"text": extracted_jd.strip()}
-    except Exception as e:
-        print(f"Scrape Error: {e}")
-        return {"error": f"Failed to fetch or parse URL: {e}"}, 500
 
 
 @app.route('/generate-documents/<int:analysis_id>', methods=['GET'])
